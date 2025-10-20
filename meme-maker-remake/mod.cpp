@@ -646,13 +646,21 @@ extern "C"
 		}
 
 		//Check for turning on the maker
-		if (!makerActive && !CheckEditMode()) {
-			if (KeyGetPress(KEYS_TAB) || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
-				startMemeMaker();
+		if (!makerActive) {
+			if (!CheckEditMode()) {
+				if (KeyGetPress(KEYS_TAB) || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
+					startMemeMaker();
+				}
 			}
 			return;
 		}
 		//--- When the maker is on ---
+
+		//Exit
+		if (KeyGetPress(KEYS_TAB) || CheckEditMode() || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
+			endMemeMaker();
+			return;
+		}
 
 		//Show the title display
 		if (showDisplay)
@@ -697,11 +705,6 @@ extern "C"
 			//Reroll random text
 			if (!showDisplay)
 				rollText();
-		}
-
-		//Exit
-		if (KeyGetPress(KEYS_TAB) || CheckEditMode() || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
-			endMemeMaker();
 		}
 
 		//Change player's face and check NPC mode
