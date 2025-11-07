@@ -346,6 +346,10 @@ extern "C"
 		WriteData<1>((int*)(0x7B5288), 0x75); //Stop Eggman's Debug movement interfering.
 		WriteData<1>((int*)(0x7B529C), 0x75); //^
 
+
+
+		WriteData<1>((int*)(0x413EBA), 0xEB); //Stop loop_const (Game speed) being forced to 60 FPS
+
 		WriteData<1>((int*)0x413DA4, 0xFF); //Disable the HUD so the timer doesn't overlap the display.
 
 		//Freeze player if told to in basic move
@@ -419,6 +423,14 @@ extern "C"
 		WriteData<1>((int*)(0x7B43B4), 0x74);
 		WriteData<1>((int*)(0x7B5288), 0x74);
 		WriteData<1>((int*)(0x7B529C), 0x74);
+
+		WriteData<1>((int*)(0x413EBA), 0x75); //Reset code for loop_const (Game speed) being forced to 60 FPS
+		
+		//Reset speed
+		if(EV_CheckCansel())
+			dsInitInt(2, 1);
+		else
+			dsInitInt(1, 1);
 
 		WriteData<1>((int*)0x413DA4, 0x00); //Enable the HUD
 

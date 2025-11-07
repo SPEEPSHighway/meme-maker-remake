@@ -172,6 +172,9 @@ static void propObject_dest(task* tp) {
 
 }
 
+
+DataArray(NJS_OBJECT, _object_shadow, 0x8BF3A0, 1);
+
 /// <summary>
 /// Disp for instance of prop task
 /// </summary>
@@ -221,7 +224,7 @@ static void propObject_disp(task* tp) {
 
 		njScale(0, twp->value.f, twp->value.f, twp->value.f);
 
-		late_DrawShadowObject(object_shadow, 1.0f);
+		late_DrawShadowObject(_object_shadow, 1.0f);
 		njPopMatrix(1);
 
 		njPopMatrix(1);

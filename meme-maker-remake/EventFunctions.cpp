@@ -113,6 +113,7 @@ struct maker_event {
 maker_event funcs[EVENTFUNC_SLOTS_NUM];
 
 enum {
+	FUNC_SPEED,
 	FUNC_ROTARY,
 	FUNC_ICHIMAIE,
 	FUNC_SKYWALK,
@@ -128,6 +129,7 @@ enum {
 
 
 std::string funcStr[] = {
+	"dsInitInt (Change game speed)",
 	"RotaryEmerald (Spawn 7 Rotating Chaos Emeralds)",
 	"CIchimaie2 (Draw a background texture)",
 	"CSkyWalk (Spawn an invisible floor at the player's feet)",
@@ -139,7 +141,6 @@ std::string funcStr[] = {
 	"Last1AHigh (Perfect Chaos cutscene platform)",
 	"Boss Spawner (Chaos 0)"
 };
-
 
 /// <summary>
 /// HUD for Event Functions
@@ -167,6 +168,22 @@ void displayEventInfo(Sint32 col, Sint32 pno) {
 	njPrintC(NJM_LOCATION(2, col++), "BACK");
 	njPrint(NJM_LOCATION(2, col++), "Effect: %s", funcStr[funcID].c_str());
 	switch (funcID) {
+	case FUNC_SPEED:
+	{
+		njPrint(NJM_LOCATION(2, col++), "VSync (60/): %d", vsync_const);
+		njPrint(NJM_LOCATION(2, col++), "Loop (60/): %d", loop_const);
+
+		//Find framerate
+		Float loop = 60.0f / (Float)loop_const;
+		Float vsync = 60.0f / (Float)vsync_const;
+		njPrint(NJM_LOCATION(2, col++), "Running at: %.2f FPS at %.2fx Speed", 60.0f / (Float)vsync_const, vsync / loop);
+		if (framerate_setting > 1) {
+			njPrintC(NJM_LOCATION(2, col++), "NOTE: Your FPS config is lower than 60 FPS,");
+			njPrintC(NJM_LOCATION(2, col++), "      so this won't reflect gameplay until you change VSync.");
+		}
+
+	}
+		break;
 	case FUNC_ROTARY:
 		njPrint(NJM_LOCATION(2, col++), "Radius: %.2f", rotRad);
 		njPrint(NJM_LOCATION(2, col++), "Speed: %02X", rotSpd);
@@ -319,6 +336,8 @@ void checkLast1A(Sint32 pno) {
 		last1aHighFloor_tp[pno] = CSkyWalk_create2(playertp[pno], 150.0f);
 	}
 }
+
+VoidFunc(EV_Destruct, 0x431120);
 
 void setFunc(Sint32 id, Sint32 pno) {
 
@@ -681,6 +700,7 @@ void eventFunctionsMain(Sint32 pno) {
 		++cursor;
 
 		switch (funcID) {
+		case FUNC_SPEED: //This is the same as rotary
 		case FUNC_ROTARY:
 			cursor = NJM_MIN(3, cursor);
 			break;
@@ -745,6 +765,10 @@ void eventFunctionsMain(Sint32 pno) {
 			break;
 		case 2:
 			switch (funcID) {
+			case FUNC_SPEED:
+				vsync_const = NJM_MIN(60, vsync_const + 1);
+				njSetWaitVsyncCount(vsync_const);
+				break;
 			case FUNC_ROTARY:
 				rotRad = NJM_MIN(10000.0f, rotRad + 0.1f);
 				break;
@@ -755,6 +779,9 @@ void eventFunctionsMain(Sint32 pno) {
 			break;
 		case 3:
 			switch (funcID) {
+			case FUNC_SPEED:
+				loop_const = NJM_MIN(60, loop_const + 1);
+				break;
 			case FUNC_ROTARY:
 				rotSpd = NJM_MIN(9999, rotSpd + 1);
 				break;
@@ -795,6 +822,10 @@ void eventFunctionsMain(Sint32 pno) {
 			break;
 		case 2:
 			switch (funcID) {
+			case FUNC_SPEED:
+				vsync_const = NJM_MAX(1, vsync_const - 1);
+				njSetWaitVsyncCount(vsync_const);
+				break;
 			case FUNC_ROTARY:
 				rotRad = NJM_MAX(0.0f, rotRad - 0.1f);
 				break;
@@ -805,6 +836,9 @@ void eventFunctionsMain(Sint32 pno) {
 			break;
 		case 3:
 			switch (funcID) {
+			case FUNC_SPEED:
+				loop_const = NJM_MAX(1, loop_const - 1);
+				break;
 			case FUNC_ROTARY:
 				rotSpd = NJM_MAX(0, rotSpd - 1);
 				break;
