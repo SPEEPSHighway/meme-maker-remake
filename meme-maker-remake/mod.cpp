@@ -86,8 +86,6 @@ extern "C"
 	static FunctionHook<void, task*> AmyBirdExe_hook(AmyBirdExe);
 	static FunctionHook<void> LimitPosPlayer_hook(LimitPosPlayer);
 	static FunctionHook<Sint32> SeqGetTime_hook(SeqGetTime2);
-	static FunctionHook<void, Sint32> KillHimByFallingDownP2_hook(KillHimByFallingDownP2);
-	static FunctionHook<void, Sint32> KillHimByFallingDownP_hook(KillHimByFallingDownP);
 	static FunctionHook<void, Sint32> KillHimP_hook(KillHimP);
 	static FunctionHook<void, char> DamegeRingScatter_hook(DamegeRingScatter);
 
@@ -98,20 +96,6 @@ extern "C"
 	void keepMyRingsPlease(char pno) {
 		if (!makerActive || allowDeath) {
 			DamegeRingScatter_hook.Original(pno);
-		}
-	}
-
-	//Prevent death by falling
-	void dontKillHimByFallingDownP(Sint32 pid) {
-		if (!makerActive || allowDeath) {
-			KillHimByFallingDownP_hook.Original(pid);
-		}
-	}
-
-	//Prevent death by falling
-	void dontKillHimByFallingDownP2(Sint32 pid) {
-		if (!makerActive || allowDeath) {
-			KillHimByFallingDownP2_hook.Original(pid);
 		}
 	}
 
@@ -258,9 +242,8 @@ extern "C"
 		LimitPosPlayer_hook.Hook(chaos7NoBarrier);
 
 		//Prevent killing the player
-		KillHimByFallingDownP_hook.Hook(dontKillHimByFallingDownP);
 		KillHimP_hook.Hook(dontKillHimP);
-		KillHimByFallingDownP2_hook.Hook(dontKillHimByFallingDownP2);
+
 		DamegeRingScatter_hook.Hook(keepMyRingsPlease);
 
 		//Ini Configuration
@@ -347,6 +330,13 @@ extern "C"
 		WriteData<1>((int*)(0x7B529C), 0x75); //^
 
 
+		//Disable Death Planes
+		if (!allowDeath) {
+			WriteData<1>((int*)(0X446AD0), 0xC3);
+			WriteData<1>((int*)(0x446AF0), 0xC3);
+		}
+
+
 
 		WriteData<1>((int*)(0x413EBA), 0xEB); //Stop loop_const (Game speed) being forced to 60 FPS
 
@@ -395,6 +385,12 @@ extern "C"
 
 		//Reset the camera
 		resetFreeCamera();
+
+		//Enable Death Planes
+		if (!allowDeath) {
+			WriteData<1>((int*)(0X446AD0), 0x68);
+			WriteData<1>((int*)(0x446AF0), 0x50);
+		}
 
 		//Reset debug text colour
 		njPrintColor(0xFFBFBFBF);
