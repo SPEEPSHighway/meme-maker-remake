@@ -72,6 +72,8 @@ extern "C"
 	std::string subUpper = "";
 	std::string subLower = "";
 	std::string subVoice = "";
+	std::string subTime = "";
+	Sint32 subTimeInt;
 	std::string subtitleFilePath;
 	char customSubtitle[128];
 	const char* customMessage[] = { customSubtitle, NULL };
@@ -395,22 +397,29 @@ extern "C"
 		//Reset debug text colour
 		njPrintColor(0xFFBFBFBF);
 
-		//Unfreeze player if frozen
-		if (playertwp[pno] && !playerFreeze[pno]) {
-			releaseMode_accountforSuperSonic();
-		}			
 
-		//Reset player's face
-		faceNo[pno] = -1;
-		if (playertwp[pno]) {
-			playertwp[pno]->ewp->face.nbFrame = 0;
-			playertwp[pno]->ewp->look.ang.y = 0;
-			playertwp[pno]->ewp->look.ang.z = 0;
+		for (Sint32 i = 0; i < 8; ++i) {
+			if (playertp[i]) {
+				//Unfreeze player if frozen
+				if (!playerFreeze[i]) {
+					releaseMode_accountforSuperSonic();
+				}
+
+				//Reset player's face
+				faceNo[i] = -1;
+				playertwp[i]->ewp->face.nbFrame = 0;
+				playertwp[i]->ewp->look.ang.y = 0;
+				playertwp[i]->ewp->look.ang.z = 0;
+
+				playertwp[i]->flag &= ~0x4000;
+
+				//End invincibility
+				playertwp[i]->wtimer = 0;
+				
+
+				throughplayer_off(playertp[0]);
+			}
 		}
-
-		playertwp[0]->flag &= ~0x4000;
-
-		throughplayer_off(playertp[0]);
 
 
 		WriteData<1>((int*)0x437760, 0x74); //Enable normal cameras
@@ -429,11 +438,6 @@ extern "C"
 			dsInitInt(1, 1);
 
 		WriteData<1>((int*)0x413DA4, 0x00); //Enable the HUD
-
-		//End invincibility
-		if (playertwp[pno]) {
-			playertwp[pno]->wtimer = 0;
-		}
 
 		if (CheckEditMode()) {
 			DisablePause();
@@ -742,13 +746,20 @@ extern "C"
 				std::getline(subFile, subUpper);
 				std::getline(subFile, subLower);
 				std::getline(subFile, subVoice);
+				std::getline(subFile, subTime);
 				subFile.close();
 			}
 
 			if (subVoice.length() != 0) Serif_Play(atoi(subVoice.c_str()));
 			if (!(subUpper.length() == 0 && subLower.length() == 0)) {
 				snprintf(customSubtitle, LengthOfArray(customSubtitle), "\a%s \n%s", subUpper.c_str(), subLower.c_str());
-				HintMainMessagesTime(customMessage, 180);
+
+				if (atoi(subTime.c_str()))
+					subTimeInt = atoi(subTime.c_str());
+				else
+					subTimeInt = 180;
+					
+				HintMainMessagesTime(customMessage, subTimeInt);
 			}
 		}
 

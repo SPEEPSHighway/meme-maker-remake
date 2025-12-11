@@ -616,23 +616,23 @@ void advanceEventEffects() {
 		wPillar_clear();
 }
 
-void toggleSuperSonic() {
-	if (maker_mode == 6 && playerpwp[0] && playertwp[0]->counter.b[1] == PLNO_SONIC) {
-		if (playerpwp[0]->equipment & 0x8000) {
-			playerpwp[0]->equipment &= ~0x8000;
+void toggleSuperSonic(Sint32 pno) {
+	if (maker_mode == 6 && playerpwp[pno] && playertwp[pno]->counter.b[1] == PLNO_SONIC) {
+		if (playerpwp[pno]->equipment & 0x8000) {
+			playerpwp[pno]->equipment &= ~0x8000;
 
-			if (playertwp[0]->mode != 99) {
-				playertwp[0]->mode = 1;
-				SetInputP(0, 24); //Prevent smode lingering and causing him to re-transform in certain situations.
+			if (playertwp[pno]->mode != 99) {
+				playertwp[pno]->mode = 1;
+				SetInputP(pno, 24); //Prevent smode lingering and causing him to re-transform in certain situations.
 				
 			}
 		}
-		else if (playertwp[0]->mode != 99) {
+		else if (playertwp[pno]->mode != 99) {
 			if (GetStageNumber() != 0x1300) {
 				texLoadTexturePvmFile("SUPERSONIC", &SUPERSONIC_TEXLIST);
 			}
 
-			SetInputP(0, 46);
+			SetInputP(pno, 46);
 		}
 	}
 }
@@ -804,7 +804,7 @@ void eventFunctionsMain(Sint32 pno) {
 				capture_follow = capture_follow != 1;
 				break;
 			case FUNC_LAST1A:
-				toggleSuperSonic();
+				toggleSuperSonic(pno);
 				break;
 			}
 		case 7: //only used by wpillar
@@ -862,7 +862,7 @@ void eventFunctionsMain(Sint32 pno) {
 				capture_follow = capture_follow != 1;
 				break;
 			case FUNC_LAST1A:
-				toggleSuperSonic();
+				toggleSuperSonic(pno);
 				break;
 			}
 		case 7: //only used by wpillar

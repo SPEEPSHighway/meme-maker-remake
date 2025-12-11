@@ -310,7 +310,7 @@ void setLookingAngle(Sint32 pno) {
 
 	//Invert X-Axis if the player is facing the camera
 	Bool invertX = FALSE;
-	Uint16 facingAngle = (Uint16)SubAngle(camera_twp->ang.y + 0x4000, -playertwp[0]->ang.y);
+	Uint16 facingAngle = (Uint16)SubAngle(camera_twp->ang.y + 0x4000, -playertwp[pno]->ang.y);
 	if (facingAngle > 0xB500 || facingAngle < 0x4500) {
 		invertX = TRUE;
 	}
@@ -391,9 +391,9 @@ void setLookingPoint(Sint32 pno) {
 	if (KeyGetOn(KEYS_FSLASH)) {
 		if (playertwp[pno]) {
 			if (isEditPoint && pTaskWorkEditor) {
-				pTaskWorkEditor->pos = playertwp[0]->pos;
+				pTaskWorkEditor->pos = playertwp[pno]->pos;
 			}
-			playertwp[pno]->ewp->look.pos = playertwp[0]->pos;
+			playertwp[pno]->ewp->look.pos = playertwp[pno]->pos;
 		}
 	}
 
@@ -523,7 +523,7 @@ void setLookingNoLimits(Sint32 pno) {
 
 		//Invert X-Axis if the player is facing the camera
 		Bool invertX = FALSE;
-		Uint16 facingAngle = (Uint16)SubAngle(camera_twp->ang.y + 0x4000, -playertwp[0]->ang.y);
+		Uint16 facingAngle = (Uint16)SubAngle(camera_twp->ang.y + 0x4000, -playertwp[pno]->ang.y);
 		if (facingAngle > 0xB500 || facingAngle < 0x4500) {
 			invertX = TRUE;
 		}

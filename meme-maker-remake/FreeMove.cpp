@@ -156,9 +156,9 @@ void movementKeyboardCtrls(Sint32 pno) {
 	if (KeyGetPress(KEYS_RARROW)) {
 		if (playertwp[pno]) {
 			savedCoords[pno].anim = playerpwp[pno]->mj.reqaction;
-			savedCoords[pno].pos = playertwp[0]->pos;
-			savedCoords[pno].ang = playertwp[0]->ang;
-			savedCoords[pno].scl = playertwp[0]->scl;
+			savedCoords[pno].pos = playertwp[pno]->pos;
+			savedCoords[pno].ang = playertwp[pno]->ang;
+			savedCoords[pno].scl = playertwp[pno]->scl;
 		}
 	}
 	else if (KeyGetPress(KEYS_LARROW)) {
@@ -274,9 +274,9 @@ void doBasicAnimation(Sint32 pno) {
 		case Buttons_Right:
 			if (playertwp[pno]) {
 				savedCoords[pno].anim = playerpwp[pno]->mj.reqaction;
-				savedCoords[pno].pos = playertwp[0]->pos;
-				savedCoords[pno].ang = playertwp[0]->ang;
-				savedCoords[pno].scl = playertwp[0]->scl;
+				savedCoords[pno].pos = playertwp[pno]->pos;
+				savedCoords[pno].ang = playertwp[pno]->ang;
+				savedCoords[pno].scl = playertwp[pno]->scl;
 			}
 			break;
 		}
@@ -288,7 +288,7 @@ void doBasicAnimation(Sint32 pno) {
 				if (playerpwp[pno]->equipment & 0x8000)
 					playertwp[pno]->mode = 75;
 				else
-					playertwp[0]->mode = 1;
+					playertwp[pno]->mode = 1;
 			}
 		}
 		moveID = 0;
