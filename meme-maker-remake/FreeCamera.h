@@ -117,6 +117,7 @@ static const std::string camMDList[]
 	"CAMMD_NUM",
 };
 
+void setCamSpdBool(Bool value);
 void resetFreeCamera();
 void displayCameraInfo(Sint32 col, Sint32 pno);
 void editorCameraCheck(Sint32 pno);

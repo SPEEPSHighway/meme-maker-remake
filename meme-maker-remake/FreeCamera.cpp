@@ -23,7 +23,7 @@ struct camCoords {
 };
 
 camCoords savedCoords_cam;
-
+Bool uncappedCamRotSpd;
 
 void resetFreeCamera() {
 
@@ -35,6 +35,9 @@ void resetFreeCamera() {
 	cam_mode = 0;
 }
 
+void setCamSpdBool(Bool value) {
+	uncappedCamRotSpd = value;
+}
 
 /// <summary>
 /// HUD for Free Move
@@ -177,6 +180,12 @@ void cameraFreeMove(Sint32 pno) {
 		camera_twp->pos.z += njSin(input_data[pno].angle) * (Float)persp / (Float)0x31C7 * cam_movementSpeed / 2.0f * input_data[pno].stroke;
 	}
 
+	Float cam_rotSpd = cam_movementSpeed;
+
+	if (!uncappedCamRotSpd && cam_movementSpeed > 5.0f) {
+		cam_rotSpd = 5.0f;
+	}
+
 
 	if (per[0]->on & Buttons_Z) {
 		//Y Position
@@ -185,17 +194,17 @@ void cameraFreeMove(Sint32 pno) {
 
 		//Y Rotation
 		if (analogRightX > 3072.0f)
-			camera_twp->ang.z -= (Uint16)((cam_movementSpeed * (Float)persp / (Float)0x31C7 * 100.0f) * (analogRightX / 32768.0f));
+			camera_twp->ang.z -= (Uint16)((cam_rotSpd * (Float)persp / (Float)0x31C7 * 100.0f) * (analogRightX / 32768.0f));
 		if (analogRightX < -3072.0f)
-			camera_twp->ang.z += (Uint16)((cam_movementSpeed * (Float)persp / (Float)0x31C7 * 100.0f) * (analogRightX / -32768.0f));
+			camera_twp->ang.z += (Uint16)((cam_rotSpd * (Float)persp / (Float)0x31C7 * 100.0f) * (analogRightX / -32768.0f));
 
 		if (analogRightY > 3072.0f) {
-			persp = NJM_MIN(0x9000, persp + (Angle)cam_movementSpeed * 10);
+			persp = NJM_MIN(0x9000, persp + (Angle)cam_rotSpd * 10);
 			njSetPerspective(persp);
 			perspective_value = persp;
 		}
 		if (analogRightY < -3072.0f) {
-			persp = NJM_MAX(1, persp - (Angle)cam_movementSpeed * 10);
+			persp = NJM_MAX(1, persp - (Angle)cam_rotSpd * 10);
 			njSetPerspective(persp);
 			perspective_value = persp;
 		}
@@ -207,13 +216,13 @@ void cameraFreeMove(Sint32 pno) {
 
 		persp = perspective_value;
 		if (analogRightY > 3072.0f)
-			camera_twp->ang.x -= (Uint16)((cam_movementSpeed * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightY / 32768.0f) - 0.08));
+			camera_twp->ang.x -= (Uint16)((cam_rotSpd * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightY / 32768.0f) - 0.08));
 		if (analogRightY < -3072.0f)
-			camera_twp->ang.x += (Uint16)((cam_movementSpeed * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightY / -32768.0f) - 0.08));
+			camera_twp->ang.x += (Uint16)((cam_rotSpd * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightY / -32768.0f) - 0.08));
 		if (analogRightX > 3072.0f)
-			camera_twp->ang.y -= (Uint16)((cam_movementSpeed * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightX / 32768.0f) - 0.08));
+			camera_twp->ang.y -= (Uint16)((cam_rotSpd * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightX / 32768.0f) - 0.08));
 		if (analogRightX < -3072.0f)
-			camera_twp->ang.y += (Uint16)((cam_movementSpeed * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightX / -32768.0f) - 0.08));
+			camera_twp->ang.y += (Uint16)((cam_rotSpd * (Float)persp / (Float)0x31C7 * 75.0f) * ((analogRightX / -32768.0f) - 0.08));
 	}
 }
 

@@ -253,6 +253,7 @@ extern "C"
 		charCursorMax += config->getBool("General", "EnableZERO", false);
 		allowDupeChars = config->getBool("General", "DupeChars", false);
 		allowDeath = config->getBool("General", "AllowDeath", false);
+		setCamSpdBool(config->getBool("General", "UncappedCamRotSpd", false));
 
 		//Set up forcing time of day
 		SeqGetTime_hook.Hook(forceTimeOfDay);
