@@ -15,6 +15,11 @@ static Sint32 cam_mode;
 static Sint32 persp = 0x31C7;
 
 static Bool objSpawnRange;
+Bool cameraOnPlayback;
+static Sint32 pbCamCount;
+static Bool pbCamintMode;
+static Sint32 pbCamintFrame = 60;
+static Bool isFreeCam;
 
 struct camCoords {
 	NJS_POINT3 pos;
@@ -22,14 +27,37 @@ struct camCoords {
 	Angle persp;
 };
 
+struct camStorage {
+	camCoords cameraData;
+	Bool interpolateMode;
+	Sint32 frame;
+	Sint32 nbFrame;
+};
+
 camCoords savedCoords_cam;
+camCoords savedCoords_freecam; //Store freecam during playback
+camStorage* cameraQueue[500];
+
 Bool uncappedCamRotSpd;
+
+
+void startFreeCam() {
+	free_camera_mode |= 4;
+	CameraSetCollisionCamera(CAMMD_FOLLOW, CAMADJ_NONE);
+	cameraSystemWork.G_scCameraAttribute = 2;
+	cameraSystemWork.G_scCameraMode = 0;
+	cameraSystemWork.G_scCameraDirect = 0;
+}
+
+void endFreeCam() {
+	cameraSystemWork.G_scCameraDirect = 1;
+	CameraReleaseCollisionCamera();
+}
 
 void resetFreeCamera() {
 
 	if (cam_mode) {
-		cameraSystemWork.G_scCameraDirect = 1;
-		CameraReleaseCollisionCamera();
+		endFreeCam();
 	}
 
 	cam_mode = 0;
@@ -38,6 +66,15 @@ void resetFreeCamera() {
 void setCamSpdBool(Bool value) {
 	uncappedCamRotSpd = value;
 }
+
+
+Sint32 findEmptyCamStorage() {
+	for (Sint32 i = 0; i < LengthOfArray(cameraQueue); ++i) {
+		if (!cameraQueue[i]) {
+			return i;
+		}
+	}
+};
 
 /// <summary>
 /// HUD for Free Move
@@ -121,6 +158,32 @@ void displayCameraInfo(Sint32 col, Sint32 pno) {
 		njPrint(NJM_LOCATION(2, col++), "Adjust Rate = %.3f", cam_movementSpeedRate);
 		njPrintC(NJM_LOCATION(2, col++), "<- LOAD / SAVE ->");
 	}
+
+	col++;
+	njPrint(NJM_LOCATION(2, col++), "CAMERA PLAYBACK");
+
+	Sint32 camQueueSize = findEmptyCamStorage();
+	njPrint(NJM_LOCATION(2, col++), "Stored Cameras: %d", camQueueSize);
+
+	if (camQueueSize) {
+		njPrint(NJM_LOCATION(2, col++), "Int Mode: %s", pbCamintMode ? "SMOOTH" : "FIXED SPEED");
+		njPrint(NJM_LOCATION(2, col++), "Int Frames: %d", pbCamintFrame);
+	}
+	else {
+		njPrintC(NJM_LOCATION(2, col++), "Int Mode: N/A");
+		njPrintC(NJM_LOCATION(2, col++), "Int Frames: N/A");
+	}
+
+	njPrintC(NJM_LOCATION(2, col++), "Queue Camera");
+	njPrintC(NJM_LOCATION(2, col++), "Remove Last Camera");
+	njPrintC(NJM_LOCATION(2, col++), "Clear Queue");
+
+	if(cameraOnPlayback)
+		njPrintC(NJM_LOCATION(2, col++), "STOP");
+	else
+		njPrintC(NJM_LOCATION(2, col++), "PLAY");
+	njPrintC(NJM_LOCATION(2, col++), "Use SHIFT+P to play queue on any mode.");
+
 }
 
 /// <summary>
@@ -143,22 +206,22 @@ void cameraFreeMove(Sint32 pno) {
 	}
 
 	//Adjust Rate
-	if (KeyGetOn(KEYS_LBRACKET)) {
+	if (!(KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) && KeyGetOn(KEYS_LBRACKET)) {
 		cam_movementSpeedRate = NJM_MAX(0.0f, cam_movementSpeedRate - 0.001f);
 	}
-	else if (KeyGetOn(KEYS_RBRACKET)) {
+	else if (!(KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) && KeyGetOn(KEYS_RBRACKET)) {
 		cam_movementSpeedRate = NJM_MIN(1.0f, cam_movementSpeedRate + 0.001f);
 	}
 
 	//Save & Load
-	if (KeyGetPress(KEYS_RARROW) || (per[0]->press & Buttons_Right && cam_EditID == 22)) {
+	if (KeyGetPress(KEYS_RARROW) || (per[0]->press & Buttons_Right && cam_EditID == 22 && cam_mode == 2)) {
 		if (camera_twp) {
 			savedCoords_cam.pos = camera_twp->pos;
 			savedCoords_cam.ang = camera_twp->ang;
 			savedCoords_cam.persp = persp;
 		}
 	}
-	else if (KeyGetPress(KEYS_LARROW) || (per[0]->press & Buttons_Left && cam_EditID == 22)) {
+	else if (KeyGetPress(KEYS_LARROW) || (per[0]->press & Buttons_Left && cam_EditID == 22 && cam_mode == 2)) {
 		if (camera_twp) {
 			camera_twp->pos = savedCoords_cam.pos;
 			camera_twp->ang = savedCoords_cam.ang;
@@ -268,18 +331,134 @@ void changeCamera(Sint32 pno) {
 		}
 
 		//Set up as a collision camera - the highest priority, usually reserved for first person/back camera.
-		if(camMd != -1)
+		if(camMd != -1 && !cameraOnPlayback)
 			CameraSetCollisionCamera(camMd, camAdj);
 		else
 			CameraReleaseCollisionCamera();
 	}
 
-	if (KeyGetOn(KEYS_FSLASH)) {
+	if (!(KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) && KeyGetOn(KEYS_FSLASH) && !cameraOnPlayback) {
 		CameraReleaseCollisionCamera();
 	}
 }
 
+void resetPlaybackCam() {
+	cameraOnPlayback = FALSE;
+	EV_CameraOff();
+	pbCamCount = 0;
 
+	//Reset number of frames played per cam
+	for (Sint32 i = 0; i < LengthOfArray(cameraQueue); ++i) {
+		if (cameraQueue[i]) {
+			cameraQueue[i]->frame = cameraQueue[i]->nbFrame;
+		}
+	}
+
+	if (cam_mode == 2) {
+		startFreeCam();
+
+		if (camera_twp) {
+			camera_twp->pos = savedCoords_freecam.pos;
+			camera_twp->ang = savedCoords_freecam.ang;
+			njSetPerspective(savedCoords_freecam.persp);
+		}
+	}
+
+
+}
+
+void playPlaybackCam() {
+	if (!EV_Check()) {
+		if (!cameraOnPlayback) {
+			cameraOnPlayback = TRUE;
+
+			if (cam_mode == 2) {
+
+				//Mod needs to exit the free camera mode,
+				//As it's a higher priority camera than the event one.
+				//Store free camera values for later.
+				if (camera_twp) {
+					savedCoords_freecam.pos = camera_twp->pos;
+					savedCoords_freecam.ang = camera_twp->ang;
+					savedCoords_freecam.persp = persp;
+				}
+
+				endFreeCam();
+			}
+
+			if (!evCameraW.event) //Just to make sure it's not already running somehow
+				EV_CameraOn();
+
+
+
+			pbCamCount = 0;
+		}
+		else {
+			resetPlaybackCam();
+		}
+	}
+}
+
+void clearPlaybackCam() {
+	for (Sint32 i = 0; i < LengthOfArray(cameraQueue); ++i) {
+		if (cameraQueue[i]) {
+			Free(cameraQueue[i]);
+			cameraQueue[i] = 0;
+		}
+	}
+}
+
+void removePlaybackCam() {
+	Sint32 camStorageID = findEmptyCamStorage();
+
+	Free(cameraQueue[camStorageID - 1]);
+	cameraQueue[camStorageID - 1] = 0;
+}
+
+void storePlaybackCam() {
+	Sint32 camStorageID = findEmptyCamStorage();
+
+	cameraQueue[camStorageID] = (camStorage*)MAlloc(sizeof(camStorage));
+	camStorage* cam = cameraQueue[camStorageID];
+	cam->cameraData.pos = camera_twp->pos;
+	cam->cameraData.ang = camera_twp->ang;
+	cam->cameraData.persp = persp;
+
+	if (camStorageID) {
+		cam->nbFrame = pbCamintFrame;
+		cam->frame = pbCamintFrame;
+		cam->interpolateMode = pbCamintMode;
+	}
+	else {
+		//First entry in the list should be 0
+		cam->nbFrame = 0;
+		cam->frame = 0;
+		cam->interpolateMode = 0;
+	}
+}
+
+void processPlaybackCam() {
+	if (cameraOnPlayback) {
+		camStorage* cam = cameraQueue[pbCamCount];
+		if (!cam) { //If there's no camera stored then this is the end of the list, reset.
+			resetPlaybackCam();
+		}
+		else {
+
+			//First frame of camera,set the camera up
+			if (cam->frame == cam->nbFrame) {
+				EV_CameraPos(cam->interpolateMode, cam->nbFrame, cam->cameraData.pos.x, cam->cameraData.pos.y, cam->cameraData.pos.z);
+				EV_CameraAng(cam->interpolateMode, cam->nbFrame, cam->cameraData.ang.x, cam->cameraData.ang.y, cam->cameraData.ang.z);
+				EV_CameraPerspective(cam->interpolateMode, cam->nbFrame, cam->cameraData.persp);
+			}
+
+			//goto next cam after frames are up
+			if (!cam->frame--) {
+				++pbCamCount;
+			}
+		}
+	}
+}
 
 void doCameraSettngs(Sint32 pno) {
 
@@ -296,6 +475,21 @@ void doCameraSettngs(Sint32 pno) {
 		isPressorOn = per[0]->on & ~Buttons_Y;
 	}
 
+	//I regret making these menus a nightmare
+	Sint32 camPbMenuBase;
+	switch (cam_mode) {
+	default:
+	case 0:
+		camPbMenuBase = 8;
+		break;
+	case 1:
+		camPbMenuBase = 20;
+		break;
+	case 2:
+		camPbMenuBase = 26;
+		break;
+	}
+
 	if (per[0]->press & Buttons_Y && cam_EditID == 0) {
 		cam_EditID = 1;
 		maker_mode = 0;
@@ -303,34 +497,89 @@ void doCameraSettngs(Sint32 pno) {
 	}
 
 
+	//Playback stuff
+	//----------------------------------
+	if (cam_EditID == camPbMenuBase + 1) { //int frames
+		if (isPressorOn & Buttons_Left) {
+			pbCamintFrame = NJM_MAX(pbCamintFrame - 1, 0);
+		}
+		else if (isPressorOn & Buttons_Right) {
+			pbCamintFrame = NJM_MIN(pbCamintFrame + 1, INT_MAX - 1);
+		}
+	}
+
+	if (per[0]->press & Buttons_Y) {
+		if (cam_EditID == camPbMenuBase) { //mdoe
+			pbCamintMode = pbCamintMode ? FALSE : TRUE;
+		}
+		if (cam_EditID == camPbMenuBase + 2) { //queue
+			storePlaybackCam();
+		}
+		else if (cam_EditID == camPbMenuBase + 3) {//remove
+			removePlaybackCam();
+		}
+		else if (cam_EditID == camPbMenuBase + 4) { //clear
+			clearPlaybackCam();
+		}
+		else if (cam_EditID == camPbMenuBase + 5) { //play
+			playPlaybackCam();
+		}
+	}
+	//---------------------------------
+
+
 	switch (isPressorOn) {
 	case Buttons_Up:
 		cam_EditID = NJM_MAX(0, cam_EditID - 1);
 
 		switch (cam_mode) {
+		case 0:
+			if (cam_EditID > 3 && cam_EditID < 8) {
+				cam_EditID = 3;
+			}
+			break;
 		case 1:
 			if (cam_EditID > 3 && cam_EditID < 14)
 				cam_EditID = 3;
+
+			if (cam_EditID > 15 && cam_EditID < 20) {
+				cam_EditID = 15;
+			}
 			break;
 		case 2:
 			if (cam_EditID > 3 && cam_EditID < 19)
 				cam_EditID = 3;
+			if (cam_EditID > 22 && cam_EditID < 26) {
+				cam_EditID = 22;
+			}
 			break;
 		}
 		break;
 	case Buttons_Down:
 		switch (cam_mode) {
 		case 0:
-			cam_EditID = NJM_MIN(3, cam_EditID + 1);
+			cam_EditID = NJM_MIN(13, cam_EditID + 1);
+
+			if (cam_EditID > 3 && cam_EditID < 8) {
+				cam_EditID = 8;
+			}
 			break;
 		case 1:
-			cam_EditID = NJM_MIN(15, cam_EditID + 1);
+			cam_EditID = NJM_MIN(25, cam_EditID + 1);
 
 			if (cam_EditID > 3 && cam_EditID < 14)
 				cam_EditID = 14;
+
+			if (cam_EditID > 15 && cam_EditID < 20) {
+				cam_EditID = 20;
+			}
 			break;
 		case 2:
-			cam_EditID = NJM_MIN(22, cam_EditID + 1);
+			cam_EditID = NJM_MIN(31, cam_EditID + 1);
+
+			if (cam_EditID > 22 && cam_EditID < 26) {
+				cam_EditID = 26;
+			}
 
 			if (cam_EditID > 3 && cam_EditID < 20)
 				cam_EditID = 20;
@@ -346,10 +595,12 @@ void doCameraSettngs(Sint32 pno) {
 			camAdj = NJM_MAX(camAdj - 1, 0);
 			break;
 		case 20: //Freecam Spd
-			cam_movementSpeed = NJM_MAX(0.0f, cam_movementSpeed - cam_movementSpeedRate);
+			if(cam_mode == 2)
+				cam_movementSpeed = NJM_MAX(0.0f, cam_movementSpeed - cam_movementSpeedRate);
 			break;
 		case 21: //Freecam AdjRate
-			cam_movementSpeedRate = NJM_MAX(0.0f, cam_movementSpeedRate - 0.001f);
+			if (cam_mode == 2)
+				cam_movementSpeedRate = NJM_MAX(0.0f, cam_movementSpeedRate - 0.001f);
 			break;
 		}
 		break;
@@ -362,10 +613,12 @@ void doCameraSettngs(Sint32 pno) {
 			camAdj = NJM_MIN(camAdj + 1, CameraModeTable.ssAdjustCount - 1);
 			break;
 		case 20:
-			cam_movementSpeed = NJM_MIN(10000.0f, cam_movementSpeed + cam_movementSpeedRate);
+			if (cam_mode == 2)
+				cam_movementSpeed = NJM_MIN(10000.0f, cam_movementSpeed + cam_movementSpeedRate);
 			break;
 		case 21:
-			cam_movementSpeedRate = NJM_MIN(1.0f, cam_movementSpeedRate + 0.001f);
+			if (cam_mode == 2)
+				cam_movementSpeedRate = NJM_MIN(1.0f, cam_movementSpeedRate + 0.001f);
 			break;
 		}
 		break;
@@ -386,11 +639,35 @@ void doCameraSettngs(Sint32 pno) {
 
 
 
+	//Camera playback keyboard controls
+	if (KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) {
+		if (KeyGetPress(KEYS_N)) {
+			storePlaybackCam();
+		}
+
+		//Remove the last stored camera
+		if (KeyGetPress(KEYS_M)) {
+			removePlaybackCam();
+
+		}
+
+		if (KeyGetOn(KEYS_RBRACKET)) {
+			pbCamintFrame = NJM_MIN(pbCamintFrame + 1, INT_MAX - 1);
+		}
+		else if (KeyGetOn(KEYS_LBRACKET)) {
+			pbCamintFrame = NJM_MAX(pbCamintFrame - 1, 0);
+		}
+
+		//Clear queue
+		if (KeyGetPress(KEYS_FSLASH)) {
+			clearPlaybackCam();
+		}
+	}
 
 	stgAct = (Uint16)GetStageNumber();
 
 	//Process CAMERA CHANGE
-	if (KeyGetPress(KEYS_C) || (cam_EditID == 1 && per[0]->press & Buttons_Y)) {
+	if ((KeyGetPress(KEYS_C) || (cam_EditID == 1 && per[0]->press & Buttons_Y)) && !cameraOnPlayback) {
 		if (cam_mode == 2) {
 			cameraSystemWork.G_scCameraDirect = 1;
 			CameraReleaseCollisionCamera();
@@ -408,24 +685,19 @@ void doCameraSettngs(Sint32 pno) {
 
 
 	//Process CAMERA MOVEMENT
-	if (KeyGetPress(KEYS_V) || (cam_EditID == 2 && per[0]->press & Buttons_Y)) {
+	if ((KeyGetPress(KEYS_V) || (cam_EditID == 2 && per[0]->press & Buttons_Y)) && !cameraOnPlayback) {
 		cam_mode = cam_mode == 2 ? 0 : 2;
 		cam_EditID = cam_mode == 2 ? 20 : 2;
 
 		//Init & End Camera Movement
 		if (cam_mode == 2) {
-			free_camera_mode |= 4;
-			CameraSetCollisionCamera(CAMMD_FOLLOW, CAMADJ_NONE);
-			cameraSystemWork.G_scCameraAttribute = 2;
-			cameraSystemWork.G_scCameraMode = 0;
-			cameraSystemWork.G_scCameraDirect = 0;
+			startFreeCam();
 		}
 		else {
 			persp = 0x31C7;
 			njSetPerspective(0x31C7);
+			endFreeCam();
 			stgAct = 0xFFFF;
-			cameraSystemWork.G_scCameraDirect = 1;
-			CameraReleaseCollisionCamera();
 		}
 		return;
 	}

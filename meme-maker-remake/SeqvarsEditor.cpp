@@ -38,11 +38,11 @@ fieldflag adventureFlags[] = {
 	{ "FLAG_EC_EGGMANBUTTON", "Opens the door to the Chao Garden teleporter.", 0x28, 3 },
 	{ "FLAG_EC_ELEVATOR_TOP", "Opens the doors to Eggman's bedroom and slots room.", 0x29, 1 },
 	{ "FLAG_EC_ELEVATOR_BTM", "Opens the exit to Eggman's quarters.", 0x2A, 1 },
-	//{ "FLAG_EC_GATE_A_CTRL", "Unknown.", 0x2B, 1 },
-	//{ "FLAG_EC_EGGLIFT_CTRL", "Egg Carrier Exterior Lift Status.", 0x2C, 5 },
+	{ "FLAG_EC_GATE_A_CTRL", "Egg Carrier Exterior Lift Gate Status.", 0x2B, 5 },
+	{ "FLAG_EC_EGGLIFT_CTRL", "Egg Carrier Exterior Lift Status.", 0x2C, 5 },
 
 
-	//{ "SSVAR_EGG_ON", "", 0x40, 1 },
+	{ "SSVAR_EGG_ON", "Possibly an old version of SSVAR_EGG_ON_STAND.", 0x40, 1 },
 	{ "FLAG_SONIC_PLAYABLE", "Character Select: Unlocks Sonic.", 0x41, 1 },
 	{ "FLAG_MILES_PLAYABLE", "Character Select: Unlocks Tails.", 0x42, 1 },
 	{ "FLAG_KNUCKLES_PLAYABLE", "Character Select: Unlocks Knuckles.", 0x43, 1 },

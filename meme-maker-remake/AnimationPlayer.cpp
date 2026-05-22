@@ -29,7 +29,6 @@ DataPointer(NJS_OBJECT*, object_sonic_s_r_a5_01_s_r_a5_01_ptr, 0x6D711E); //Ref 
 EVENT_ACTION_LIST* playlist[8];
 
 
-
 enum {
 	TYPE_EVENT,
 	TYPE_GAMEPLAY,
@@ -64,12 +63,7 @@ void displayAnimInfo(Sint32 col, Sint32 pno) {
 	njPrintC(NJM_LOCATION(1, col++), "Mode: Animation Player");
 	col++;
 	njPrintC(NJM_LOCATION(2, col++), "Play NJS_ACTION animations.");
-	if (playlist[pno]) {
-		njPrint(NJM_LOCATION(2, col++), "LSHIFT/Z Button (RB) = %s", playlist[pno] ? "Play queue" : "Play");
-	}
-	else {
-		njPrintC(NJM_LOCATION(2, col++), "LSHIFT/Z Button (RB) = Play");
-	}
+	njPrintC(NJM_LOCATION(2, col++), "LSHIFT/Z Button (RB) = Play");
 	njPrintC(NJM_LOCATION(2, col++), "CTRL/Y+Z Button (Y+RB) = Store");
 	njPrintC(NJM_LOCATION(2, col++), "Y (Held) = Fast List");
 	njPrintC(NJM_LOCATION(2, col++), "/ = Reset");
@@ -120,21 +114,38 @@ void displayAnimInfo(Sint32 col, Sint32 pno) {
 		{
 		case PLNO_SONIC:
 			njPrint(NJM_LOCATION(2, col++), "Sonic's Finger: %s", SONIC_OBJECTS[6]->sibling == SONIC_OBJECTS[5] ? "OFF" : "ON");
+			col++;
 			break;
 		case PLNO_TAILS:
 			njPrint(NJM_LOCATION(2, col++), "Animate tails: %s", tailsTails ? "OFF" : "ON");
+			col++;
 			break;
 		case PLNO_BIG:
 		case PLNO_E102:
 			njPrintC(NJM_LOCATION(2, col++), "NOTE: Non-Player anims disabled for this character.");
 			njPrintC(NJM_LOCATION(8, col++), "Their secondary objects can cause problems.");
 			break;
-		;	case PLNO_AMY:
+		case PLNO_AMY:
 			njPrint(NJM_LOCATION(2, col++), "Hammer Scale: %.2f", hammerScale);
 			njPrint(NJM_LOCATION(2, col++), "Disable Bird: %s", giveMeTheBird ? "Y" : "N");
 			break;
+		default:
+			col++;
+			col++;
+			break;
 		}
+		njPrintC(NJM_LOCATION(2, col++), "QUEUE OPTIONS (Z Button when selected)");
+		njPrintC(NJM_LOCATION(2, col++), "Remove Last Animation");
+		njPrintC(NJM_LOCATION(2, col++), "Clear Queue");
+		njPrintC(NJM_LOCATION(2, col++), "PLAY");
+
+
 	}
+}
+
+//Check the playlist exists for the global bind
+Bool checkPlaylistExists(Sint32 pno) {
+	return playlist[pno] != 0;
 }
 
 /// <summary>
@@ -154,6 +165,42 @@ void findCharAnimsBase() {
 	charlist_Error = TRUE;
 }
 
+
+//Copy animation playlist
+EVENT_ACTION_LIST* EV_CopyPlaylist(EVENT_ACTION_LIST* src_p) {
+
+	if (!src_p)
+		return NULL;
+
+	EVENT_ACTION_LIST* actionlist = (EVENT_ACTION_LIST*)CAlloc(1, sizeof(EVENT_ACTION_LIST));
+	actionlist->mode = src_p->mode;
+	actionlist->linkframe = src_p->linkframe;
+	actionlist->action = src_p->action;
+	actionlist->texlist = src_p->texlist;
+	actionlist->speed = src_p->speed;
+	actionlist->next = EV_CopyPlaylist(src_p->next);
+	return actionlist;
+}
+
+//Delete animation playlist
+void EV_ClearPlaylist(EVENT_ACTION_LIST* src_p) {
+
+	if (!src_p)
+		return;
+
+	EVENT_ACTION_LIST* next;
+	EVENT_ACTION_LIST* list = src_p;
+	if (list)
+	{
+		do
+		{
+			next = list->next;
+			Free(list);
+			list = next;
+		} while (next);
+	}
+}
+
 ///Edit of EV_SetAction to store in queue instead of play
 void EV_StoreAction(task* tp, NJS_ACTION* ap, NJS_TEXLIST* lp, Float speed, Sint32 mode, Sint32 linkframe) {
 	EVENT_ACTION_LIST* listp2;
@@ -170,7 +217,7 @@ void EV_StoreAction(task* tp, NJS_ACTION* ap, NJS_TEXLIST* lp, Float speed, Sint
 			listp = &listp2->next;
 		} while (action);
 	}
-	EVENT_ACTION_LIST* actionlist = (EVENT_ACTION_LIST*)CAlloc(1, 0x18);
+	EVENT_ACTION_LIST* actionlist = (EVENT_ACTION_LIST*)CAlloc(1, sizeof(EVENT_ACTION_LIST));
 	*listp = actionlist;
 	actionlist->mode = mode;
 	actionlist->linkframe = linkframe;
@@ -301,25 +348,10 @@ void processAnim(Sint32 pno, Bool isStore) {
 }
 
 
-///Play animation
-void playMakerAnim(Sint32 pno) {
-	if (playlist[pno]) {
-		//Play stored queue and reset it.
-		EV_ClrAction(playertp[pno]);
-		playertwp[pno]->ewp->action.list = playlist[pno];
-		playlist[pno] = 0;
-	}
-	else {
-		//Need to use this or it won't clean the action list, leading to the interpolation value causing problems.
-		EV_ClrAction(playertp[pno]);
-
-		processAnim(pno, FALSE);
-	}
-
+void checkLinkframe(Sint32 pno) {
 	/// <summary>
 	/// Game can crash trying to linkframe between different models, so remove linkframe if somehow plays from a different model
 	/// </summary>
-	/// 
 	if (playertwp[pno] && playertwp[pno]->ewp && playertwp[pno]->ewp->action.list) {
 		for (EVENT_ACTION_LIST* list = playertwp[pno]->ewp->action.list; list->next; list = list->next) {
 			if (list->next->action.object != list->action.object) {
@@ -328,6 +360,37 @@ void playMakerAnim(Sint32 pno) {
 			}
 		}
 	}
+}
+
+void playAnimQueue(Sint32 pno) {
+
+	if (!playlist[pno])
+		return;
+
+	//Back up the queue, since EV_SetAction deletes the data it uses afterward.
+	EVENT_ACTION_LIST* playlist_copy = EV_CopyPlaylist(playlist[pno]);
+
+	//Reset action
+	EV_ClrAction(playertp[pno]);
+
+	//Play the anim and restore the backup.
+	playertwp[pno]->ewp->action.list = playlist[pno];
+	playlist[pno] = playlist_copy;
+
+	checkLinkframe(pno);
+}
+
+
+///Play animation
+void playAnimSingle(Sint32 pno) {
+	//Need to use this or it won't clean the action list, leading to the interpolation value causing problems.
+	EV_ClrAction(playertp[pno]);
+
+	//Play the anim
+	processAnim(pno, FALSE);
+
+	checkLinkframe(pno);
+	
 }
 
 
@@ -385,7 +448,7 @@ static void doAnimKeyboardControls(Sint32 pno) {
 
 	//Play Animation/Animation Queue
 	if (KeyGetPress(KEYS_LSHIFT)) {
-		playMakerAnim(pno);
+		playAnimSingle(pno);
 	}
 
 }
@@ -412,6 +475,34 @@ static void tailsToggle(Sint32 pno) {
 	}
 
 }
+
+/// <summary>
+/// Removes the last animation in the queue
+/// </summary>
+/// <param name="list"></param>
+void removeLastAnimation(EVENT_ACTION_LIST* src_p) {
+
+	if (!src_p)
+		return;
+
+	EVENT_ACTION_LIST* list_last{};
+	EVENT_ACTION_LIST* list_2ndlast{};
+
+
+	EVENT_ACTION_LIST* list = src_p;
+	while (list->next) {
+		list_2ndlast = list;
+		list = list->next;
+	}
+
+	Free(list_last);
+
+	if (list_2ndlast) {
+		list_2ndlast->next = NULL;
+	}
+
+}
+
 
 ///Animation Player Main Function
 void doAnimPlayer(Sint32 pno) {
@@ -447,6 +538,42 @@ void doAnimPlayer(Sint32 pno) {
 		   If selectedPropFolder is empty (You deleted a folder) then adjust propID accordingly.*/
 		if (selectedCustomAnim == "" && ap_anim_no > 0) {
 			getNameOfFile(&selectedCustomAnim, folder, --ap_anim_no, FALSE);
+		}
+	}
+
+	Sint32 list_firstmax = 6;
+
+	switch (playertwp[pno]->counter.b[1]) {
+	case PLNO_SONIC:
+	case PLNO_TAILS:
+		list_firstmax = 7;
+		break;
+	case PLNO_AMY:
+		list_firstmax = 8;
+		break;
+	}
+
+
+	if (per[0]->press & Buttons_Z) {
+		if (animEditID == 10) {
+
+			Sint32 storedNum = 0;
+			for (EVENT_ACTION_LIST* list = playlist[pno]; list; list = list->next) {
+				++storedNum;
+			}
+
+			if (storedNum > 1) {
+				removeLastAnimation(playlist[pno]);
+			}
+			else {
+				EV_ClearPlaylist(playlist[pno]);
+				playlist[pno] = NULL;
+			}
+		}
+		else if (animEditID == 11) {
+			EV_ClrAction(playertp[pno]);
+			EV_ClearPlaylist(playlist[pno]);
+			playlist[pno] = NULL;
 		}
 	}
 
@@ -599,16 +726,21 @@ void doAnimPlayer(Sint32 pno) {
 	case Buttons_Up:
 		animEditID = NJM_MAX(0, animEditID - 1);
 
+		if (animEditID > list_firstmax && animEditID < 10) {
+			animEditID = list_firstmax;
+		}
+
 		if (animEditID == 4) //Skip over the name part
 			--animEditID;
 		break;
 	case Buttons_Down:
-		//Only Sonic and Amy have the last list option
-		if (animEditID != 6 ||
-			((playertwp[pno]->counter.b[1] == PLNO_SONIC && animEditID != 7) ||
-				playertwp[pno]->counter.b[1] == PLNO_TAILS && animEditID != 7 ||
-				playertwp[pno]->counter.b[1] == PLNO_AMY))
-			animEditID = NJM_MIN(8, animEditID + 1);
+		animEditID = NJM_MIN(12, animEditID + 1);
+
+		if (animEditID > list_firstmax && animEditID < 10) {
+			animEditID = 10;
+		}
+
+		
 		if (animEditID == 4) //Skip over the name part
 			++animEditID;
 		break;
@@ -622,10 +754,16 @@ void doAnimPlayer(Sint32 pno) {
 
 	//Store/Play
 	if (per[0]->press & Buttons_Z) {
-		if (per[0]->on & Buttons_Y)
-			storeAnim(pno);
-		else
-			playMakerAnim(pno);
+
+		if (animEditID < 10) {
+			if (per[0]->on & Buttons_Y)
+				storeAnim(pno);
+			else
+				playAnimSingle(pno);
+		}
+		else if (animEditID == 12) {
+			playAnimQueue(pno);
+		}
 	}
 
 	if (playertwp[pno]->counter.b[1] == PLNO_AMY) {
@@ -637,6 +775,9 @@ void doAnimPlayer(Sint32 pno) {
 	if (KeyGetPress(KEYS_FSLASH)) {
 		isLoop = FALSE;
 		EV_ClrAction(playertp[pno]);
+		EV_ClearPlaylist(playlist[pno]);
+		playlist[pno] = NULL;
+
 		animSpeed = 0.5f;
 		animSpeedRate = 0.01f;
 		link_num = 8;

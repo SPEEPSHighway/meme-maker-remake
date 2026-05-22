@@ -34,7 +34,14 @@ extern "C"
 		"thank you for getting me back to good toad",
 		"https://speeps-highway.tumblr.com/",
 		"https://www.youtube.com/@SPEEPSHighway",
-		"Check out Windii's blog: https://browniehideout.wordpress.com/"
+		"Check out Windii's blog: https://browniehideout.wordpress.com/",
+		"I wonder what happened to Sonic?",
+		"Oh no, it was a dud!",
+		"I hate it when he doesn't listen.",
+		"You don't have enough memory in the memory card.",
+		"melik: no",
+		"Why don't you try going to the Casino?"
+
 	};
 
 	#define QUOTES_SIZE sizeof(quotes) / sizeof(quotes[0])
@@ -570,7 +577,11 @@ extern "C"
 
 	void processInput() {
 		//Free Move
-		if ((!DEBUGMODEMOD && KeyGetPress(KEYS_1)) || maker_mode == M_MODE_FREEMOVE && per[0]->press & Buttons_A) {
+		if ((!(KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT))
+			&& !(KeyGetOn(KEYS_LCTRL) || KeyGetOn(KEYS_RCTRL))
+			&& (!DEBUGMODEMOD && KeyGetPress(KEYS_1)))
+			|| maker_mode == M_MODE_FREEMOVE
+			&& per[0]->press & Buttons_A) {
 
 			if (maker_mode == M_MODE_NONE && !cursor && per[0]->press & Buttons_Y) {
 				playerFreeze[pno] = TRUE;
@@ -580,45 +591,12 @@ extern "C"
 		}
 
 		if (!DEBUGMODEMOD) {
-			//Camera Options
-			if (KeyGetPress(KEYS_2)) {
-				maker_setMode(M_MODE_CAMERA);
-			}
-
-			//Head Options
-			if (KeyGetPress(KEYS_3)) {
-				maker_setMode(M_MODE_HEAD);
-			}
-
-			//Animation Player
-			if (KeyGetPress(KEYS_4)) {
-				maker_setMode(M_MODE_ANIM);
-			}
-
-			//Particle Generator
-			if (KeyGetPress(KEYS_5)) {
-				maker_setMode(M_MODE_PARTICLE);
-			}
-
-			//Event Functions
-			if (KeyGetPress(KEYS_6)) {
-				maker_setMode(M_MODE_EVENT);
-			}
-
-			//Prop Spawner
-			if (KeyGetPress(KEYS_7)) {
-				maker_setMode(M_MODE_PROP);
-			}
-
-			//NPC Player
-			if (KeyGetPress(KEYS_8)) {
-				maker_setMode(M_MODE_NPC);
-			}
-
-			//Flags
-			if (KeyGetPress(KEYS_9)) {
-				maker_setMode(M_MODE_FLAGS);
-			}
+			for (Sint32 i = 0; i < 8; ++i)
+				if (!(KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT))
+					&& !(KeyGetOn(KEYS_LCTRL) || KeyGetOn(KEYS_RCTRL))
+					&& KeyGetPress(KEYS_2 + i)) {
+					maker_setMode(2 + i);
+				}
 		}
 
 
@@ -646,34 +624,19 @@ extern "C"
 	__declspec(dllexport) void __cdecl OnFrame()
 	{
 		//If not in-game don't do anything. TODO: Turn off editor
-		if (ssGameMode != MD_GAME_MAIN) {
+		if (ssGameMode != MD_GAME_MAIN || !makerActive) {
 			return;
 		}
 
 		//Copies the ID of the pressed key to the debug console
-		if (Testing) {
-			for (int i = 1; i < 256; i++) {
-				if (KeyGetPress(i))
-					PrintDebug("\n%d\n", i);
-			}
-		}
+		//if (Testing) {
+		//	for (int i = 1; i < 256; i++) {
+		//		if (KeyGetPress(i))
+		//			PrintDebug("\n%d\n", i);
+		//	}
+		//}
 
-		//Check for turning on the maker
-		if (!makerActive) {
-			if (!CheckEditMode()) {
-				if (KeyGetPress(KEYS_TAB) || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
-					startMemeMaker();
-				}
-			}
-			return;
-		}
 		//--- When the maker is on ---
-
-		//Exit
-		if (KeyGetPress(KEYS_TAB) || CheckEditMode() || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
-			endMemeMaker();
-			return;
-		}
 
 		//Show the title display
 		if (showDisplay)
@@ -710,16 +673,6 @@ extern "C"
 		if (playerpwp[0])
 			playerpwp[0]->breathtimer = 0; 
 
-
-		//Show or Hide Display
-		if (KeyGetPress(KEYS_CAPSLOCK) || (per[0]->press & Buttons_D && !KeyGetPress(KEYS_V)) && !(per[0]->on & Buttons_Z)) {
-			showDisplay = showDisplay != TRUE; //VS hates our Bool type and kept trying to recommend bitwise with !showDisplay lol
-
-			//Reroll random text
-			if (!showDisplay)
-				rollText();
-		}
-
 		//Change player's face and check NPC mode
 		for (Sint32 i = 0; i < 8; ++i) {
 			checkNPCMode(pno);
@@ -736,8 +689,135 @@ extern "C"
 			}
 		}
 
+
 		//Play stuff spawned by the particle generator.
 		playParticles();
+
+
+
+		//Turn on throughplayer, which disables collision between player characters.
+		for (Sint32 i = 0; i < 8; ++i) {
+			if (playertp[i]) {
+				throughplayer_on(playertp[i]);
+			}
+		}
+
+		
+
+		//Check the skywalk for the last1a platform is there when it's active (for newly spawned characters)
+		checkLast1A(pno);
+
+		//Process camera playback
+		processPlaybackCam();
+
+		//Need input in this function because otherwise the player jumps out of free move
+		//Check for key presses
+		processInput();
+
+		//Quick unfreeze
+		if (maker_mode == M_MODE_NONE && per[0]->press & Buttons_A && playerFreeze[pno]) {
+			playerFreeze[pno] = FALSE;
+
+			releaseMode_accountforSuperSonic();
+		}
+
+	}
+
+	void playFace(Sint32 player, Sint32 line) {
+		faceNo[player] = 0;
+		std::ifstream subFile(faceFilePath);
+		if (subFile.is_open())
+		{
+			while(line--)
+				std::getline(subFile, customFace);
+			subFile.close();
+		}
+		EV_ClrFace(EV_GetPlayer(player));
+		if (customFace.length() > 0) EV_SetFace(EV_GetPlayer(player), (char*)customFace.c_str());
+	}
+
+
+	__declspec(dllexport) void OnInput()
+	{
+		if (ssGameMode != MD_GAME_MAIN) {
+			return;
+		}
+
+		//Check for turning on the maker
+		if (!makerActive) {
+			if (!CheckEditMode()) {
+				if (KeyGetPress(KEYS_TAB) || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
+					startMemeMaker();
+				}
+			}
+			return;
+		}
+		//--- When the maker is on ---
+
+		//Exit
+		if (KeyGetPress(KEYS_TAB) || CheckEditMode() || per[0]->on & Buttons_Z && per[0]->press & Buttons_D) {
+			endMemeMaker();
+			return;
+		}
+
+
+		//Play camera and animations all at once with CTRL+P
+		if ((KeyGetOn(KEYS_LCTRL) || KeyGetOn(KEYS_RCTRL)) && KeyGetPress(KEYS_P)) {
+				playPlaybackCam();
+
+				//for face too it's CTRL+SHIFT+P
+				if (KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) {
+					for (Sint32 i = 0; i < 8; ++i) {
+						if (playertp[i]) {
+							playFace(i, i + 1);
+						}
+					}
+				}
+
+				//anim
+				for (Sint32 i = 0; i < 8; ++i) {
+					if (playertp[i] && checkPlaylistExists(i))
+						playAnimQueue(i);
+				}
+		}
+		else {
+			//Camera Playback, but don't do it during an event so it doesn't conflict with the existing event camera.
+			if (KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) {
+				if (KeyGetPress(KEYS_P)) {
+					playPlaybackCam();
+				}
+
+
+				for (Sint32 i = 0; i < 8; ++i) {
+					if (KeyGetPress(KEYS_1 + i)) {
+						if (playertp[i] && checkPlaylistExists(i))
+							playAnimQueue(i);
+					}
+				}
+			}
+
+			if (KeyGetOn(KEYS_LCTRL) || KeyGetOn(KEYS_RCTRL)) {
+				//Read from file to get face animation
+				for (Sint32 i = 0; i < 8; ++i) {
+					if (KeyGetPress(KEYS_1 + i)) {
+						if (playertp[i])
+							playFace(i, i + 1);
+					}
+				}
+			}
+		}
+
+		//Show or Hide Display
+		if (KeyGetPress(KEYS_CAPSLOCK) || (per[0]->press & Buttons_D && !KeyGetPress(KEYS_V)) && !(per[0]->on & Buttons_Z)) {
+			showDisplay = showDisplay != TRUE; //VS hates our Bool type and kept trying to recommend bitwise with !showDisplay lol
+
+			//Reroll random text
+			if (!showDisplay)
+				rollText();
+		}
+
+
+
 
 		//Create Custom Subtitle. Aside from names, this is the same as the original.
 		if ((per[0]->press & Buttons_C && !KeyGetPress(KEYS_C)) || KeyGetPress(KEYS_L)) {
@@ -759,7 +839,7 @@ extern "C"
 					subTimeInt = atoi(subTime.c_str());
 				else
 					subTimeInt = 180;
-					
+
 				HintMainMessagesTime(customMessage, subTimeInt);
 			}
 		}
@@ -833,31 +913,8 @@ extern "C"
 			playertwp[0]->flag |= 0x4000;
 		}
 
-		//Turn on throughplayer, which disables collision between player characters.
-		for (Sint32 i = 0; i < 8; ++i) {
-			if (playertp[i]) {
-				throughplayer_on(playertp[i]);
-			}
-		}
-
-		
-
-		//Check the skywalk for the last1a platform is there when it's active (for newly spawned characters)
-		checkLast1A(pno);
-
 		ControlEnabled = TRUE;
 
-		//Check for key presses
-		processInput();
-
-		//Quick unfreeze
-		if (maker_mode == M_MODE_NONE && per[0]->press & Buttons_A && playerFreeze[pno]) {
-			playerFreeze[pno] = FALSE;
-
-			releaseMode_accountforSuperSonic();
-		}
-
-		
 		//Process mode.
 		//These are always ran when the mode is active.
 		switch (maker_mode) {
@@ -870,7 +927,7 @@ extern "C"
 				cursor = NJM_MIN(M_MODE_MAX - 2, cursor + 1);
 				break;
 			case Buttons_Y:
-				if(showDisplay) //It's a bit awkward with it off
+				if (showDisplay) //It's a bit awkward with it off
 					maker_setMode(cursor + 1);
 				return;
 			}
@@ -893,15 +950,7 @@ extern "C"
 		{
 			//Read from file to get face animation
 			if (KeyGetPress(KEYS_RSHIFT) || per[0]->press & Buttons_Z) {
-				faceNo[pno] = 0;
-				std::ifstream subFile(faceFilePath);
-				if (subFile.is_open())
-				{
-					std::getline(subFile, customFace);
-					subFile.close();
-				}
-				EV_ClrFace(EV_GetPlayer(pno));
-				if (customFace.length() > 0) EV_SetFace(EV_GetPlayer(pno), (char*)customFace.c_str());
+				playFace(pno, 1);
 			}
 			doHeadFunctions(pno);
 			break;

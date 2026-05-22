@@ -121,4 +121,6 @@ void setCamSpdBool(Bool value);
 void resetFreeCamera();
 void displayCameraInfo(Sint32 col, Sint32 pno);
 void editorCameraCheck(Sint32 pno);
+void playPlaybackCam();
+void processPlaybackCam();
 void doCameraSettngs(Sint32 pno);
