@@ -54,6 +54,8 @@ extern "C"
 	Sint32 pno;
 
 	//Config
+	Bool enableNPCDisp;
+	Bool enableHintDisp;
 	Bool allowDupeChars;
 	Bool allowDeath;
 
@@ -232,6 +234,26 @@ extern "C"
 		}
 	}
 
+
+static Bool checkNPCDisp() {
+	if (enableNPCDisp) {
+		return TRUE;	
+	}
+	else {
+		return EV_CheckCansel();
+	}
+}
+
+//Enable FLAG_EVENT_HINTBOX_DISP outside events.
+static Bool checkHintDisp() {
+	if (enableNPCDisp) {
+		return TRUE;
+	}
+	else {
+		return EV_CheckCansel();
+	}
+}
+
 	__declspec(dllexport) ModInfo SADXModInfo = { ModLoaderVer };
 	__declspec(dllexport) void __cdecl Init(const char* path, const HelperFunctions& helperFunctions)
 	{
@@ -258,6 +280,8 @@ extern "C"
 		//Ini Configuration
 		const IniFile* config = new IniFile(std::string(path) + "\\config.ini");
 		charCursorMax += config->getBool("General", "EnableZERO", false);
+		enableNPCDisp = config->getBool("General", "EnableNPCDisp", false);
+		enableHintDisp = config->getBool("General", "EnableHintDisp", false);
 		allowDupeChars = config->getBool("General", "DupeChars", false);
 		allowDeath = config->getBool("General", "AllowDeath", false);
 		setCamSpdBool(config->getBool("General", "UncappedCamRotSpd", false));
@@ -276,6 +300,25 @@ extern "C"
 		WriteCall((void*)0x437699, firstPersonCamCheck);
 
 
+		//Enable Hint box disp flag everywhere if set in config.
+		WriteCall((void*)0x7A9BD4, checkHintDisp);
+
+		//Enable NPC disp flag everywhere if set in config, both behaviour and drawing.
+		WriteCall((void*)0x634851, checkNPCDisp); //ssp_exec_eveidle
+		WriteCall((void*)0x634825, checkNPCDisp); //ssp_exec
+		WriteCall((void*)0x634295, checkNPCDisp); //ssp_draw
+		WriteCall((void*)0x634C20, checkNPCDisp); //ssp_walk_man_eveidle
+		WriteCall((void*)0x634C60, checkNPCDisp); //ssp_walk_man
+		WriteCall((void*)0x5363A1, checkNPCDisp); //mrp_exec_eveidle
+		WriteCall((void*)0x536373, checkNPCDisp); //mrp_exec
+		WriteCall((void*)0x535D85, checkNPCDisp); //mrp_draw
+		WriteCall((void*)0x536680, checkNPCDisp); //mrp_walk_man
+		WriteCall((void*)0x536640, checkNPCDisp); //mrp_walk_man_eveidle
+		WriteCall((void*)0x543D70, checkNPCDisp); //pastp_walk_man_eveidle
+		WriteCall((void*)0x543DA0, checkNPCDisp); //pastp_walk_man
+		WriteCall((void*)0x5439A0, checkNPCDisp); //pastp_exec
+		WriteCall((void*)0x5439C1, checkNPCDisp); //pastp_exec_eveidle
+		WriteCall((void*)0x543335, checkNPCDisp); //pastp_draw
 	}
 
 	__declspec(dllexport) void __cdecl OnInitEnd()

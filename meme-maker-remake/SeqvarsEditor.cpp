@@ -324,8 +324,8 @@ fieldflag adventureFlags[] = {
 	{ "FLAG_BIG_RUAR_NORMAL", "Big: Lure Upgrade (Station Square)", 0x1E0, 1 },
 	{ "FLAG_BIG_RUAR_RED", "Big: Lure Upgrade (Mystic Ruins Jungle)", 0x1E1, 1 },
 	{ "FLAG_BIG_RUAR_SILVER", "Big: Unused. Affects lure model in upgrade rings due to an oversight.", 0x1E2, 1 },
-	{ "FLAG_EVENT_HINTBOX_DISP", "Enables NPCs in cutscenes.", 0x1E3, 1 },
-	{ "FLAG_EVENT_NPC_DISP", "Enables Hint Boxes in cutscenes.", 0x1E4, 1 },
+	{ "FLAG_EVENT_HINTBOX_DISP", "Enables Hint Boxes in events. (Everywhere if enabled in config)", 0x1E3, 1 },
+	{ "FLAG_EVENT_NPC_DISP", "Enables NPCs in events. (Everywhere if enabled in config)", 0x1E4, 1 },
 	{ "FLAG_ALL_LAST", "", 0x1E5, 1 },
 	{ NULL }
 };

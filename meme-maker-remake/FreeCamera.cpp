@@ -389,8 +389,6 @@ void playPlaybackCam() {
 			if (!evCameraW.event) //Just to make sure it's not already running somehow
 				EV_CameraOn();
 
-
-
 			pbCamCount = 0;
 		}
 		else {
@@ -444,6 +442,13 @@ void processPlaybackCam() {
 			resetPlaybackCam();
 		}
 		else {
+
+			if (!pbCamCount) {
+				evCameraW.pers.ang = cam->cameraData.persp;
+				njSetPerspective(evCameraW.pers.ang);
+				perspective_value = evCameraW.pers.ang;
+			}
+
 
 			//First frame of camera,set the camera up
 			if (cam->frame == cam->nbFrame) {
