@@ -34,14 +34,15 @@ extern "C"
 		"thank you for getting me back to good toad",
 		"https://speeps-highway.tumblr.com/",
 		"https://www.youtube.com/@SPEEPSHighway",
+		"https://x.com/SPEEPSHighway",
 		"Check out Windii's blog: https://browniehideout.wordpress.com/",
 		"I wonder what happened to Sonic?",
 		"Oh no, it was a dud!",
 		"I hate it when he doesn't listen.",
 		"You don't have enough memory in the memory card.",
 		"melik: no",
-		"Why don't you try going to the Casino?"
-
+		"Why don't you try going to the Casino?",
+		"I wonder what happened to Gary?"
 	};
 
 	#define QUOTES_SIZE sizeof(quotes) / sizeof(quotes[0])
@@ -99,9 +100,18 @@ extern "C"
 	static FunctionHook<Sint32> SeqGetTime_hook(SeqGetTime2);
 	static FunctionHook<void, Sint32> KillHimP_hook(KillHimP);
 	static FunctionHook<void, char> DamegeRingScatter_hook(DamegeRingScatter);
+	static FunctionHook<void, taskwk*, taskwk*> CCL_CalcColliPO_hook(_CCL_CalcColliPO);
 
 
 	//Hooked functions
+
+
+	//Remove pesky object collision that gets in the way of free move
+	void objectColliRemoval(taskwk* twp1, taskwk* twp2) {
+		if (!colliDisabled) {
+			CCL_CalcColliPO_hook.Original(twp1, twp2);
+		}
+	}
 
 	///Prevent damage
 	void keepMyRingsPlease(char pno) {
@@ -266,6 +276,8 @@ static Bool checkHintDisp() {
 		//Game doesn't store pointers to player heads so the mod needs to collect them itself
 		hookHead();
 
+
+
 		//Setup for removing bird
 		AmyBirdExe_hook.Hook(kill_AmyBird);
 
@@ -276,6 +288,9 @@ static Bool checkHintDisp() {
 		KillHimP_hook.Hook(dontKillHimP);
 
 		DamegeRingScatter_hook.Hook(keepMyRingsPlease);
+
+		//Setup for disabling object collision
+		CCL_CalcColliPO_hook.Hook(objectColliRemoval);
 
 		//Ini Configuration
 		const IniFile* config = new IniFile(std::string(path) + "\\config.ini");
@@ -489,6 +504,10 @@ static Bool checkHintDisp() {
 			dsInitInt(1, 1);
 
 		WriteData<1>((int*)0x413DA4, 0x00); //Enable the HUD
+
+		//Enable object collision
+		colliDisabled = FALSE;
+
 
 		if (CheckEditMode()) {
 			DisablePause();

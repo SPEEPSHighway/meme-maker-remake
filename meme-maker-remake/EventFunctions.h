@@ -3,6 +3,7 @@
 #include "Keys.h"
 
 extern task* last1aHighFloor_tp[8];
+extern Bool colliDisabled;
 
 void checkLast1A(Sint32 pno);
 void advanceEventEffects();

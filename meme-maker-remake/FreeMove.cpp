@@ -80,6 +80,27 @@ void displayFreeMoveInfo(Sint32 col, Sint32 pno) {
 		}
 	}
 
+	//Draw line between player and camera
+	NJS_POINT3COL p3col;
+	NJS_POINT3 points[2];
+	NJS_COLOR color[2];
+
+	points[0] = playertwp[pno]->pos;
+
+	//Get a position in front of the camera
+	points[1].x = camera_twp->pos.x - njSin(camera_twp->ang.y) * njCos(camera_twp->ang.x) * 20.0f;
+	points[1].y = camera_twp->pos.y + njSin(camera_twp->ang.x) * 20.0f;
+	points[1].z = camera_twp->pos.z - njCos(camera_twp->ang.y) * njCos(camera_twp->ang.x) * 20.0f;
+	DrawCollisionSphere(&points[1], 0.25f);
+	p3col.p = points;
+	color[0].color = 0xFFFFFFFF;
+	color[1].color = 0xFFFFFFFF;
+	p3col.col = color;
+	p3col.num = 2;
+	p3col.tex = 0;
+	late_DrawLine3D(&p3col, 1, 0, LATE_LIG);
+
+
 	njPrint(NJM_LOCATION(2, col++), "Animation = %d", playerpwp[pno]->mj.reqaction);
 	njPrint(NJM_LOCATION(2, col++), "POS X = %.2f", playertwp[pno]->pos.x);
 	njPrint(NJM_LOCATION(2, col++), "POS Y = %.2f", playertwp[pno]->pos.y);
@@ -109,6 +130,7 @@ void displayFreeMoveInfo(Sint32 col, Sint32 pno) {
 	njPrint(NJM_LOCATION(2, col++), "Adjust Rate = %.3f", movementSpeedRate);
 	njPrint(NJM_LOCATION(2, col++), "Motion Mode: %s", mtnList[md_mtn - 3].c_str());
 	njPrintC(NJM_LOCATION(2, col++), "<- LOAD / SAVE ->");
+	njPrintC(NJM_LOCATION(2, col++), "WARP TO CAMERA");
 	njPrintC(NJM_LOCATION(2, col++), "BACK");
 }
 
@@ -253,7 +275,7 @@ void doBasicAnimation(Sint32 pno) {
 		}
 		break;
 	case Buttons_Down:
-		moveID = NJM_MIN(17, moveID + 1);
+		moveID = NJM_MIN(18, moveID + 1);
 
 		if (moveID > 0 && moveID < 12) {
 			moveID = 12;
@@ -261,6 +283,7 @@ void doBasicAnimation(Sint32 pno) {
 		break;
 	}
 
+	//SAVE/LOAD
 	if (moveID == 16) {
 		switch (per[0]->press) {
 		case Buttons_Left:
@@ -282,7 +305,14 @@ void doBasicAnimation(Sint32 pno) {
 		}
 	}
 
+
+	//WARP TO CAMERA
 	if (per[0]->press & Buttons_Y && moveID == 17) {
+		SetPositionP(pno, camera_twp->pos.x, camera_twp->pos.y, camera_twp->pos.z);
+	}
+
+	//BACK
+	if (per[0]->press & Buttons_Y && moveID == 18) {
 		if (playertwp[pno] && playerpwp[pno]) {
 			if (!playerFreeze[pno]) {
 				if (playerpwp[pno]->equipment & 0x8000)

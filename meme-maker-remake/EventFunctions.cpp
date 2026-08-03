@@ -3,6 +3,7 @@
 #include "Keys.h"
 
 Sint8 funcID;
+Bool colliDisabled;
 
 //RotaryEmerald
 static task* rotEme[7];
@@ -124,6 +125,7 @@ enum {
 	FUNC_E101FACTORY,
 	FUNC_LAST1A,
 	FUNC_CHAOS0,
+	FUNC_COLLI,
 	FUNC_MAX
 };
 
@@ -139,7 +141,8 @@ std::string funcStr[] = {
 	"WaterPillar (Chaos's Steal Thing From Sonic Beam)",
 	"E101Factory (E101's room)",
 	"Last1AHigh (Perfect Chaos cutscene platform)",
-	"Boss Spawner (Chaos 0)"
+	"Boss Spawner (Chaos 0)",
+	"Disable Object Collision"
 };
 
 /// <summary>
@@ -294,6 +297,11 @@ void displayEventInfo(Sint32 col, Sint32 pno) {
 	case FUNC_CHAOS0:
 		njPrintC(NJM_LOCATION(2, col++), "Spawn Chaos 0.");
 		njPrint(NJM_LOCATION(2, col++), "Loaded: %s", p_Last1AHighTask ? "TRUE" : "FALSE");
+		break;
+	case FUNC_COLLI:
+		njPrintC(NJM_LOCATION(2, col++), "Disables Player-to-Object collision.");
+		njPrintC(NJM_LOCATION(2, col++), "This prevents objects pushing away the player.");
+		njPrint(NJM_LOCATION(2, col++), "Active: %s", colliDisabled ? "TRUE" : "FALSE");
 		break;
 	}
 
@@ -552,6 +560,9 @@ void setFunc(Sint32 id, Sint32 pno) {
 			DeleteChaos0();
 			p_Chaos0Task = 0;
 		}
+		break;
+	case FUNC_COLLI:
+		colliDisabled = colliDisabled ? FALSE : TRUE;
 		break;
 	}
 

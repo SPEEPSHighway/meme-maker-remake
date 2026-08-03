@@ -141,4 +141,5 @@ FunctionPointer(void, ObjectSwingableRegularExecute, (task* tp), 0x49DD40);
 FunctionPointer(void, AmyBirdExe, (task* tp), 0x4C63F0);
 FunctionPointer(void, AmyBirdInit, (task* tp), 0x4C6790);
 FunctionPointer(void, AmyBirdStart, (), 0x4C6820);
+FunctionPointer(void, _CCL_CalcColliPO, (taskwk* twp1, taskwk* twp2), 0x41FEC0);
 
