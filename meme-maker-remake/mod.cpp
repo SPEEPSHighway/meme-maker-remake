@@ -50,6 +50,7 @@ extern "C"
 
 	Bool makerActive;
 	Bool showDisplay = TRUE;
+	Bool allowCharScl;
 	Bool Testing;
 	Sint32 maker_mode;
 	Sint32 pno;
@@ -89,7 +90,7 @@ extern "C"
 	const char* customMessage[] = { customSubtitle, NULL };
 
 	std::string faceFilePath;
-	std::string customFace;
+	std::string customFace[8];
 
 	HMODULE DEBUGMODEMOD;
 
@@ -102,8 +103,90 @@ extern "C"
 	static FunctionHook<void, char> DamegeRingScatter_hook(DamegeRingScatter);
 	static FunctionHook<void, taskwk*, taskwk*> CCL_CalcColliPO_hook(_CCL_CalcColliPO);
 
-
 	//Hooked functions
+
+	FunctionPointer(void, DrawEventAction, (taskwk* twp), 0x4187D0);
+
+	void scaleCharacters(taskwk* twp) {
+		njScaleV(0, &twp->scl);
+
+		playerwk* pwp = (playerwk*)twp->cwp->mytask->mwp->work.ptr;
+
+		
+		njTranslate(0, 0.0f, twp->scl.y - 1.0f / twp->scl.y, 0.0f); //idk the formula for getting this perfect so let's just make it decent.
+
+		if (twp->ewp->action.list) {
+
+			if (twp->counter.b[1] == PLNO_TAILS) {
+				njSetZCompare(3);
+				DrawEventAction(twp);
+				npSetZCompare();
+			}
+			else {
+				DrawEventAction(twp);
+			}
+
+			switch (twp->counter.b[1]) {
+			case PLNO_SONIC:
+				WriteData<1>((Uint8*)0x494AD0, 0x5E);
+				break;
+			case PLNO_EGGMAN:
+				WriteData<1>((Uint8*)0x7B45AA, 0x61);
+				break;
+			case PLNO_TAILS:
+				WriteData<1>((Uint8*)0x460E71, 0xE9);
+				WriteData<1>((Uint8*)0x460E72, 0x58);
+				WriteData<1>((Uint8*)0x460E73, 0x03);
+				WriteData<2>((Uint8*)0x460E74, 0x00);
+				break;
+			case PLNO_KNUCKLES:
+				WriteData<1>((Uint8*)00472562, 0xE9);
+				WriteData<1>((Uint8*)00472563, 0xEA);
+				WriteData<3>((Uint8*)00472564, 0);
+				break;
+			case PLNO_TIKAL:
+				WriteData<1>((Uint8*)0x7B3489, 0x32);
+				break;
+			case PLNO_AMY:
+				WriteData<1>((Uint8*)0x487574, 0x61);
+				break;
+			default:
+				break;
+			}
+			
+		}
+		else {
+			switch (twp->counter.b[1]) {
+			case PLNO_SONIC:
+				WriteData<1>((Uint8*)0x494AD0, 0x00);
+				break;
+			case PLNO_EGGMAN:
+				WriteData<1>((Uint8*)0x7B45AA, 0x00);
+				break;
+			case PLNO_TAILS:
+				WriteData<1>((Uint8*)0x460E71, 0xEB);
+				WriteData<1>((Uint8*)0x460E72, 0x03);
+				WriteData<3>((Uint8*)0x460E73, 0x90);
+				break;
+			case PLNO_KNUCKLES:
+				WriteData<1>((Uint8*)0x472562, 0xEB);
+				WriteData<1>((Uint8*)0x472563, 0x03);
+				WriteData<3>((Uint8*)0x472564, 0x90);
+				break;
+			case PLNO_TIKAL:
+				WriteData<1>((Uint8*)0x7B3489, 0x00);
+				break;
+			case PLNO_AMY:
+				WriteData<1>((Uint8*)0x487574, 0x00);
+				break;
+			default:
+				break;
+			}
+
+			
+		}
+	};
+
 
 
 	//Remove pesky object collision that gets in the way of free move
@@ -300,6 +383,7 @@ static Bool checkHintDisp() {
 		allowDupeChars = config->getBool("General", "DupeChars", false);
 		allowDeath = config->getBool("General", "AllowDeath", false);
 		setCamSpdBool(config->getBool("General", "UncappedCamRotSpd", false));
+		allowCharScl = config->getBool("General", "EnableCharScl", false);
 
 		//Set up forcing time of day
 		SeqGetTime_hook.Hook(forceTimeOfDay);
@@ -313,6 +397,32 @@ static Bool checkHintDisp() {
 		///Add check for if back/first person cams can activate.
 		WriteCall((void*)0x43759B, firstPersonCamCheck);
 		WriteCall((void*)0x437699, firstPersonCamCheck);
+
+		//Character scaling if enabled in config
+		if (allowCharScl) {
+			/*I need their taskwk and the only available point while they're movable is DrawEventAction.
+			  E102 has a bunch of difficult stuff to work around that doesn't make it worth it,
+			  but everyone else is fine.
+			*/
+
+			//Force code to always enter the branch with DrawEventAction.
+			WriteData<2>((Uint8*)0x494AC4, 0x90); //sonc
+			WriteData<2>((Uint8*)0x7B459E, 0x90); //egg
+			WriteData<2>((Uint8*)0x460E5A, 0x90); //tails
+			WriteData<5>((Uint8*)0x460E5E, 0x90); //tails
+			WriteData<5>((Uint8*)0x460E6C, 0x90); //tails
+			WriteData<2>((Uint8*)0x472557, 0x90); //knuc
+			WriteData<2>((Uint8*)0x487568, 0x90); //amy
+			WriteData<2>((Uint8*)0x7B347D, 0x90); //tikl
+
+			//Replace DrawEventAction call
+			WriteCall((void*)0x494AC7, scaleCharacters); //sonc
+			WriteCall((void*)0x7B45A1, scaleCharacters); //egg
+			WriteCall((void*)0x460E64, scaleCharacters); //tails
+			WriteCall((void*)0x47255A, scaleCharacters); //knuc
+			WriteCall((void*)0x48756B, scaleCharacters); //amy
+			WriteCall((void*)0x7B3480, scaleCharacters); //tikl
+		}
 
 
 		//Enable Hint box disp flag everywhere if set in config.
@@ -791,11 +901,11 @@ static Bool checkHintDisp() {
 		if (subFile.is_open())
 		{
 			while(line--)
-				std::getline(subFile, customFace);
+				std::getline(subFile, customFace[player]);
 			subFile.close();
 		}
 		EV_ClrFace(EV_GetPlayer(player));
-		if (customFace.length() > 0) EV_SetFace(EV_GetPlayer(player), (char*)customFace.c_str());
+		if (customFace[player].length() > 0) EV_SetFace(EV_GetPlayer(player), (char*)customFace[player].c_str());
 	}
 
 

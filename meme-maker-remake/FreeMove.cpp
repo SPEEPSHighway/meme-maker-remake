@@ -17,7 +17,6 @@ struct playerCoords {
 
 playerCoords savedCoords[8];
 
-
 static const std::string mtnList[] = {
 	"Always Loop (MD_MTN_LOOP)",
 	"Proceed if next exists (MD_MTN_NEXT)",
@@ -112,7 +111,13 @@ void displayFreeMoveInfo(Sint32 col, Sint32 pno) {
 	njPrint(NJM_LOCATION(2, col++), "SCL Y = %.2f", playertwp[pno]->scl.y);
 	njPrint(NJM_LOCATION(2, col++), "SCL Z = %.2f", playertwp[pno]->scl.z);
 	njPrint(NJM_LOCATION(2, col++), "FACING ANG Y = %04X", (Uint16)(0x4000 - (Uint16)playertwp[pno]->ang.y));
-	col++;
+
+	if (playertwp[pno]->scl.x != 1.0f || playertwp[pno]->scl.z != 1.0f || playertwp[pno]->scl.z != 1.0f) {
+		njPrintC(NJM_LOCATION(2, col++), "/ = Reset Scl | Hold Z+X Button = Uniform Scale");
+	} else {
+		col++;
+	}
+
 	njPrintC(NJM_LOCATION(21, infoCol++), "SAVED INFO");
 	njPrint(NJM_LOCATION(21, infoCol++), "Animation = %d", savedCoords[pno].anim);
 	njPrint(NJM_LOCATION(21, infoCol++), "POS X = %.2f", savedCoords[pno].pos.x);
@@ -190,6 +195,10 @@ void movementKeyboardCtrls(Sint32 pno) {
 			playertwp[pno]->ang = savedCoords[pno].ang;
 			playertwp[pno]->scl = savedCoords[pno].scl;
 		}
+	}
+
+	if (KeyGetPress(KEYS_FSLASH)) { //Quick and dirty hack to reset scale.
+		playertwp[pno]->scl = { 1.0f, 1.0f, 1.0f };
 	}
 
 
@@ -356,27 +365,50 @@ void doPlayerMovement(Sint32 pno) {
 		taskOfPlayerOn = 0;
 	}
 
-	//AKA Shamelessly copy the debug movement code lol
-	//Round 2: Copy from the old mod
-	if (per[0]->on & Buttons_Y) {
-		if (analogLeftY > 3072.0f || analogLeftY < -3072.0f)
-			playertwp[pno]->pos.y -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed * input_data[pno].stroke;
-
-		//Y Rotation
-		if (analogRightX > 3072.0f) playertwp[pno]->ang.y -= (Uint16)(movementSpeed * 100.0f * analogRightX / 32768.0f);
-		if (analogRightX < -3072.0f) playertwp[pno]->ang.y += (Uint16)(movementSpeed * 100.0f * analogRightX / -32768.0f);
-	}
-	else {
-		if (analogLeftX > 3072.0f || analogLeftX < -3072.0f || analogLeftY > 3072.0f || analogLeftY < -3072.0f) {
-			playertwp[pno]->pos.x += njCos(input_data[pno].angle) * movementSpeed * input_data[pno].stroke;
-			playertwp[pno]->pos.z += njSin(input_data[pno].angle) * movementSpeed * input_data[pno].stroke;
+	if (per[0]->on & Buttons_Z) { //Scl
+		if (per[0]->on & Buttons_X) { //Uniform
+			if (analogLeftY > 8072.0f || analogLeftY < -8072.0f) {
+				playertwp[pno]->scl.x -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed / 50.0f * input_data[pno].stroke;
+				playertwp[pno]->scl.y -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed / 50.0f * input_data[pno].stroke;
+				playertwp[pno]->scl.z -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed / 50.0f * input_data[pno].stroke;
+			}
 		}
-		if (analogRightX > 3072.0f || analogRightX < -3072.0f || analogRightY > 3072.0f || analogRightY < -3072.0f) {
-			Angle dir = -camera_twp->ang.y + njArcTan2(analogRightY, analogRightX);
-			Float mag = analogRightY * analogRightY + analogRightX * analogRightX;
-			mag = njSqrt(mag) * mag * 3.918702724E-14f;
-			playertwp[pno]->ang.x += (Uint16)(njSin(dir) * movementSpeed * 50.0f * mag);
-			playertwp[pno]->ang.z += (Uint16)(njCos(dir) * movementSpeed * -50.0f * mag);
+		else if (per[0]->on & Buttons_Y) {
+			if (analogLeftY > 8072.0f || analogLeftY < -8072.0f)
+				playertwp[pno]->scl.y -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed / 50.0f * input_data[pno].stroke;
+		}
+		else {
+			if (analogLeftY > 8072.0f || analogLeftY < -8072.0f)
+				playertwp[pno]->scl.z -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed / 50.0f * input_data[pno].stroke;
+
+			if (analogLeftX > 8072.0f || analogLeftX < -8072.0f)
+				playertwp[pno]->scl.x += analogLeftX / njSqrt(analogLeftX * analogLeftX) * movementSpeed / 50.0f * input_data[pno].stroke;
+		}
+
+	}
+	else { //Pos
+		//AKA Shamelessly copy the debug movement code lol
+		//Round 2: Copy from the old mod
+		if (per[0]->on & Buttons_Y) {
+			if (analogLeftY > 3072.0f || analogLeftY < -3072.0f)
+				playertwp[pno]->pos.y -= analogLeftY / njSqrt(analogLeftY * analogLeftY) * movementSpeed * input_data[pno].stroke;
+
+			//Y Rotation
+			if (analogRightX > 3072.0f) playertwp[pno]->ang.y -= (Uint16)(movementSpeed * 100.0f * analogRightX / 32768.0f);
+			if (analogRightX < -3072.0f) playertwp[pno]->ang.y += (Uint16)(movementSpeed * 100.0f * analogRightX / -32768.0f);
+		}
+		else {
+			if (analogLeftX > 3072.0f || analogLeftX < -3072.0f || analogLeftY > 3072.0f || analogLeftY < -3072.0f) {
+				playertwp[pno]->pos.x += njCos(input_data[pno].angle) * movementSpeed * input_data[pno].stroke;
+				playertwp[pno]->pos.z += njSin(input_data[pno].angle) * movementSpeed * input_data[pno].stroke;
+			}
+			if (analogRightX > 3072.0f || analogRightX < -3072.0f || analogRightY > 3072.0f || analogRightY < -3072.0f) {
+				Angle dir = -camera_twp->ang.y + njArcTan2(analogRightY, analogRightX);
+				Float mag = analogRightY * analogRightY + analogRightX * analogRightX;
+				mag = njSqrt(mag) * mag * 3.918702724E-14f;
+				playertwp[pno]->ang.x += (Uint16)(njSin(dir) * movementSpeed * 50.0f * mag);
+				playertwp[pno]->ang.z += (Uint16)(njCos(dir) * movementSpeed * -50.0f * mag);
+			}
 		}
 	}
 }

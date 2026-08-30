@@ -12,6 +12,217 @@ struct fieldflag {
 	Sint32 maxVal;
 };
 
+static Bool isEventFlags;
+
+fieldflag eventFlags[] = {
+	{ "EV0001", "Sonic intro", 0x0001, 1 },
+	{ "EV0002", "Sonic defeats Chaos 0", 0x0002, 1 },
+	{ "EV0003", "Sonic sees Tails crash", 0x0003, 1 },
+	{ "EV0006", "Sonic and Tails poolside", 0x0006, 1 },
+	{ "EV0007", "Sonic faces off with the Egg Hornet", 0x0007, 1 },
+	{ "EV0008", "Chaos 1 emerges", 0x0008, 1 },
+	{ "EV0009", "Sonic and Tails are gassed", 0x0009, 1 },
+	{ "EV000B", "Chaos 4 transformation", 0x000B, 1 },
+	{ "EV000C", "Sonic and Tails part ways with Knuckles", 0x000C, 1 },
+	{ "EV000D", "Tornado 1 takes off", 0x000D, 1 },
+	{ "EV0011", "Sonic falling into Station Square", 0x0011, 1 },
+	{ "EV0012", "Amy finds Sonic", 0x0012, 1 },
+	{ "EV0013", "Amy and Sonic go to Twinkle Park", 0x0013, 1 },
+	{ "EV0014", "Sonic goes looking for Amy", 0x0014, 1 },
+	{ "EV0015", "Sonic sees Zero and Amy", 0x0015, 1 },
+	{ "EV0016", "Zero transported to the Egg Carrier", 0x0016, 1 },
+	{ "EV0017", "Sonic catches up with Tails on the Tornado 2", 0x0017, 1 },
+	{ "EV001A", "Eggman takes Birdie's Emerald", 0x001A, 1 },
+	{ "EV001B", "Sonic goes to put Eggman out of commission", 0x001B, 1 },
+	{ "EV001C", "Sonic finds Chaos 6", 0x001C, 1 },
+	{ "EV001D", "Sonic jumps from the Egg Carrier into the Mystic Ruins", 0x001D, 1 },
+	{ "EV001E", "Sonic sees the temple come out of the ground", 0x001E, 1 },
+	{ "EV0020", "Sonic looks at the Perfect Chaos mural", 0x0020, 1 },
+	{ "EV0021", "Sonic enters the Past", 0x0021, 1 },
+	{ "EV0022", "Sonic listens to Tikal in the Past", 0x0022, 1 },
+	{ "EV0023", "Sonic sees Eggman heading to his base", 0x0023, 1 },
+	{ "EV0024", "Egg Viper", 0x0024, 1 },
+	{ "EV0026", "Sonic's outro", 0x0026, 1 },
+	{ "EV0028", "Sonic vs. Knuckles", 0x0028, 1 },
+	{ "EV0029", "Tornado 2 lands on the Egg Carrier", 0x0029, 1 },
+	{ "EV002A", "Sonic and Tails awaken after being gassed", 0x002A, 1 },
+	{ "EV002B", "Sonic meets Chaos 0", 0x002B, 1 },
+	{ "EV0030", "Tails intro", 0x0030, 1 },
+	{ "EV0031", "Tails is rescued by Sonic", 0x0031, 1 },
+	{ "EV0032", "Tails and Sonic poolside", 0x0032, 1 },
+	{ "EV0033", "Tails faces off with the Egg Hornet", 0x0033, 1 },
+	{ "EV0034", "Chaos 1 emerges", 0x0034, 1 },
+	{ "EV0035", "Tails and Sonic are gassed at Casinopolis", 0x0035, 1 },
+	{ "EV0038", "Tails vs. Knuckles", 0x0038, 1 },
+	{ "EV0039", "Chaos 4 emerges", 0x0039, 1 },
+	{ "EV003A", "Tails and Sonic part ways with Knuckles", 0x003A, 1 },
+	{ "EV003B", "Tails and Sonic depart on the Tornado 1", 0x003B, 1 },
+	{ "EV003E", "Tails' flashback", 0x003E, 1 },
+	{ "EV0040", "Tails wakes up from his dream", 0x0040, 1 },
+	{ "EV0042", "Tails chases Froggy", 0x0042, 1 },
+	{ "EV0044", "Tails enters the Past", 0x0044, 1 },
+	{ "EV0045", "Tails talks to Tikal", 0x0045, 1 },
+	{ "EV0046", "Tails returns from the Past and meets Big", 0x0046, 1 },
+	{ "EV0047", "The Tornado 2 takes flight", 0x0047, 1 },
+	{ "EV0048", "Tails finds Sonic in Red Mountain", 0x0048, 1 },
+	{ "EV004B", "Tails faces off with Gamma", 0x004B, 1 },
+	{ "EV004C", "Tails escapes from the Egg Carrier with Amy", 0x004C, 1 },
+	{ "EV004D", "Eggman launches his missile attack", 0x004D, 1 },
+	{ "EV004E", "Tails follows Eggman after the missile", 0x004E, 1 },
+	{ "EV0050", "Tails takes on the Egg Walker", 0x0050, 1 },
+	{ "EV0051", "Egg Walker defeated and Station Square saved", 0x0051, 1 },
+	{ "EV0052", "Tails outro", 0x0052, 1 },
+	{ "EV0053", "Error", 0x0053, 1 },
+	{ "EV0054", "Landing on the Egg Carrier", 0x0054, 1 },
+	{ "EV0055", "Tails and Froggy go to the Past", 0x0055, 1 },
+	{ "EV0056", "Tails and Sonic awake after being gassed", 0x0056, 1 },
+	{ "EV0058", "Amy Pre-intro (?)", 0x0058, 1 },
+	{ "EV0060", "Amy intro", 0x0060, 1 },
+	{ "EV0061", "Amy meets Birdie", 0x0061, 1 },
+	{ "EV0062", "Amy meets up with Sonic", 0x0062, 1 },
+	{ "EV0063", "Amy and Sonic visit Twinkle Park", 0x0063, 1 },
+	{ "EV0064", "Amy is kidnapped by Zero", 0x0064, 1 },
+	{ "EV0065", "Amy is released by Gamma", 0x0065, 1 },
+	{ "EV0066", "Amy goes to the Past after Hot Shelter", 0x0066, 1 },
+	{ "EV0067", "Amy enters the Past", 0x0067, 1 },
+	{ "EV0068", "Amy meets Tikal", 0x0068, 1 },
+	{ "EV0069", "Eggman takes Birdie's Emerald", 0x0069, 1 },
+	{ "EV006A", "Amy and Tails escape the Egg Carrier", 0x006A, 1 },
+	{ "EV006B", "Error", 0x006B, 1 },
+	{ "EV006C", "Amy returns to the present", 0x006C, 1 },
+	{ "EV006D", "Hunt to find Birdie's family", 0x006D, 1 },
+	{ "EV006E", "Amy discovers the Final Egg Base", 0x006E, 1 },
+	{ "EV006F", "Amy chased by Zero in Final Egg", 0x006F, 1 },
+	{ "EV0070", "Amy and Birdie head back to the Egg Carrier", 0x0070, 1 },
+	{ "EV0071", "Zero confronts Amy", 0x0071, 1 },
+	{ "EV0072", "Amy outro", 0x0072, 1 },
+	{ "EV0075", "Amy is kidnapped to the Mystic Ruins", 0x0075, 1 },
+	{ "EV0080", "Knuckles intro", 0x0080, 1 },
+	{ "EV0082", "Knuckles goes hunting for the Master Emerald", 0x0082, 1 },
+	{ "EV0083", "Knuckles enters the Past", 0x0083, 1 },
+	{ "EV0084", "Knuckles while in the Past", 0x0084, 1 },
+	{ "EV0085", "Tikal talks to her father", 0x0085, 1 },
+	{ "EV0086", "Knuckles returns from the Past", 0x0086, 1 },
+	{ "EV0087", "Knuckles and Chaos 2 face off", 0x0087, 1 },
+	{ "EV0088", "Eggman tricks Knuckles", 0x0088, 1 },
+	{ "EV0089", "Knuckles goes after Sonic", 0x0089, 1 },
+	{ "EV008A", "Knuckles vs. Sonic", 0x008A, 1 },
+	{ "EV008B", "Chaos 4 emerges", 0x008B, 1 },
+	{ "EV008C", "Knuckles parts ways with Sonic and Tails", 0x008C, 1 },
+	{ "EV008D", "Knuckles goes to the Past (from Lost World)", 0x008D, 1 },
+	{ "EV008E", "Knuckles back in the Past", 0x008E, 1 },
+	{ "EV008F", "Tikal talks to Chaos", 0x008F, 1 },
+	{ "EV0091", "Knuckles restores most of the Master Emerald", 0x0091, 1 },
+	{ "EV0092", "Knuckles follows Gamma", 0x0092, 1 },
+	{ "EV0094", "Knuckles arrives on the Egg Carrier", 0x0094, 1 },
+	{ "EV0095", "Knuckles finds the last missing piece", 0x0095, 1 },
+	{ "EV0096", "Knuckles travels back to the Past one last time", 0x0096, 1 },
+	{ "EV0097", "The aftermath of Tikal's plight", 0x0097, 1 },
+	{ "EV0098", "Knuckles returns to the present", 0x0098, 1 },
+	{ "EV0099", "Knuckles fights Chaos 6", 0x0099, 1 },
+	{ "EV009A", "Knuckles has collected the final shards", 0x009A, 1 },
+	{ "EV009B", "Knuckles defeats Chaos 6", 0x009B, 1 },
+	{ "EV009C", "Error", 0x009C, 1 },
+	{ "EV009D", "Knuckles restores the Master Emerald", 0x009D, 1 },
+	{ "EV009F", "Knuckles outro", 0x009F, 1 },
+	{ "EV00A0", "Knuckles follows Eggman in Station Square hotel", 0x00A0, 1 },
+	{ "EV00B0", "Gamma intro", 0x00B0, 1 },
+	{ "EV00B1", "Gamma enters Final Egg", 0x00B1, 1 },
+	{ "EV00B2", "Gamma exits Final Egg", 0x00B2, 1 },
+	{ "EV00B3", "Useless machine", 0x00B3, 1 },
+	{ "EV00B4", "Gamma's fight with Beta", 0x00B4, 1 },
+	{ "EV00B5", "Gamma defeats Beta", 0x00B5, 1 },
+	{ "EV00B7", "The hunt for Froggy begins", 0x00B7, 1 },
+	{ "EV00B8", "Gamma goes to the Past", 0x00B8, 1 },
+	{ "EV00B9", "Gamma in the Past", 0x00B9, 1 },
+	{ "EV00BA", "Gamma and Tikal meet", 0x00BA, 1 },
+	{ "EV00BB", "Gamma returns to the Egg Carrier", 0x00BB, 1 },
+	{ "EV00BC", "Gamma goes to the wrong room", 0x00BC, 1 },
+	{ "EV00BD", "Gamma witnesses Beta being rebuilt", 0x00BD, 1 },
+	{ "EV00BE", "Gamma leaves Beta's room", 0x00BE, 1 },
+	{ "EV00BF", "Gamma meets and releases Amy", 0x00BF, 1 },
+	{ "EV00C0", "Gamma heading to the rear of the ship", 0x00C0, 1 },
+	{ "EV00C1", "Gamma emerges to fight Sonic", 0x00C1, 1 },
+	{ "EV00C2", "Gamma after the battle with Sonic", 0x00C2, 1 },
+	{ "EV00C3", "Gamma's objectives changed", 0x00C3, 1 },
+	{ "EV00C5", "Gamma remembers his brothers", 0x00C5, 1 },
+	{ "EV00C7", "Gamma outro", 0x00C7, 1 },
+	{ "EV00D0", "Big intro", 0x00D0, 1 },
+	{ "EV00D1", "Big goes searching for Froggy", 0x00D1, 1 },
+	{ "EV00D2", "Froggy heads into the sewers", 0x00D2, 1 },
+	{ "EV00D3", "Big finds Froggy with Tails", 0x00D3, 1 },
+	{ "EV00D4", "Big loses Froggy to Gamma", 0x00D4, 1 },
+	{ "EV00D8", "Big enters Hot Shelter", 0x00D8, 1 },
+	{ "EV00D9", "Big spots Froggy inside the tanks", 0x00D9, 1 },
+	{ "EV00DA", "Big saves Froggy in Hot Shelter", 0x00DA, 1 },
+	{ "EV00DB", "Big heads into the Past", 0x00DB, 1 },
+	{ "EV00DC", "Tikal talks to Big", 0x00DC, 1 },
+	{ "EV00DD", "Big returns to the Egg Carrier", 0x00DD, 1 },
+	{ "EV00DE", "Chaos 6 takes Froggy", 0x00DE, 1 },
+	{ "EV00DF", "Big thanks Sonic for saving Froggy", 0x00DF, 1 },
+	{ "EV00E0", "Big finds the Tornado 2 and leaves", 0x00E0, 1 },
+	{ "EV00E1", "Error", 0x00E1, 1 },
+	{ "EV00E2", "Big outro", 0x00E2, 1 },
+	{ "EV00E3", "Big sees Froggy heading to the beach", 0x00E3, 1 },
+	{ "EV00F0", "Tornado 2 Flash scene", 0x00F0, 1 },
+	{ "EV00F2", "Eggman heading to the Mystic Ruins base", 0x00F2, 1 },
+	{ "EV00F3", "Knuckles at the Master Emerald", 0x00F3, 1 },
+	{ "EV00F4", "Tails tells Sonic about Angel Island falling", 0x00F4, 1 },
+	{ "EV00F5", "Sonic and Tails find Eggman and Knuckles", 0x00F5, 1 },
+	{ "EV00F6", "Sonic travels to the Past", 0x00F6, 1 },
+	{ "EV00F7", "Tikal pleads with her father", 0x00F7, 1 },
+	{ "EV00F8", "Tikal seals Chaos", 0x00F8, 1 },
+	{ "EV00F9", "Sonic returns to the present", 0x00F9, 1 },
+	{ "EV00FA", "Sonic and Tails find the Tornado 2", 0x00FA, 1 },
+	{ "EV00FB", "Sonic checks on Tikal in the past", 0x00FB, 1 },
+	{ "EV00FD", "Perfect Chaos reveals himself", 0x00FD, 1 },
+	{ "EV00FE", "Last Story outro", 0x00FE, 1 },
+	{ "EV00FF", "Everyone brings Sonic the emeralds", 0x00FF, 1 },
+	{ "EV0100", "Sonic and Tails after landing on the Egg Carrier", 0x0100, 1 },
+	{ "EV0101", "Don't get too many ideas you fools!", 0x0101, 1 },
+	{ "EV0102", "The Egg Carrier has changed chape", 0x0102, 1 },
+	{ "EV0103", "Sonic at the Sky Deck entrance", 0x0103, 1 },
+	{ "EV0104", "Sonic right after Sky Deck (Is that it?)", 0x0104, 1 },
+	{ "EV0106", "Sonic heading to transform the Egg Carrier", 0x0106, 1 },
+	{ "EV0107", "Emergency alert cancelled", 0x0107, 1 },
+	{ "EV0110", "Tails and Sonic after landing on the Egg Carrier", 0x0110, 1 },
+	{ "EV0111", "Don't get too many ideas", 0x0111, 1 },
+	{ "EV0112", "The Egg Carrier has changed shape", 0x0112, 1 },
+	{ "EV0113", "Tails at the Sky Deck entrance", 0x0113, 1 },
+	{ "EV0114", "Tails right after Sky Deck", 0x0114, 1 },
+	{ "EV0120", "Egg Carrier transforms 1", 0x0120, 1 },
+	{ "EV0121", "Egg Carrier transforms 2", 0x0121, 1 },
+	{ "EV0122", "Knuckles sensing the emeralds on the Egg Carrier", 0x0122, 1 },
+	{ "EV0130", "Introduction to Hedgehog Hammer", 0x0130, 1 },
+	{ "EV0131", "Winning at Hedgehog Hammer", 0x0131, 1 },
+	{ "EV0140", "Gamma is told to find the Jet Booster", 0x0140, 1 },
+	{ "EV0141", "Gamma heads to Hot Shelter", 0x0141, 1 },
+	{ "EV0142", "Gamma rescues E-105", 0x0142, 1 },
+	{ "EV0150", "Emergency alert cancelled", 0x0150, 1 },
+	{ "EV0160", "The Echidna tribe faces Chaos", 0x0160, 1 },
+	{ "EV0165", "Sonic gets the Crystal Ring", 0x0165, 1 },
+	{ "EV0166", "Sonic gets the Light Speed Shoes", 0x0166, 1 },
+	{ "EV0167", "Sonic gets the Ancient Light", 0x0167, 1 },
+	{ "EV0168", "Tails gets the Jet Anklet", 0x0168, 1 },
+	{ "EV0169", "Tails gets the Rhythm Badge", 0x0169, 1 },
+	{ "EV016A", "Knuckles gets the Fighting Gloves", 0x016A, 1 },
+	{ "EV016B", "Knuckles gets the Shovel Claw", 0x016B, 1 },
+	{ "EV016C", "Amy gets the Long Hammer", 0x016C, 1 },
+	{ "EV016D", "Amy gets the Warrior Feather", 0x016D, 1 },
+	{ "EV016E", "Gamma gets the Laser Blaster", 0x016E, 1 },
+	{ "EV016F", "Gamma gets the Jet Booster", 0x016F, 1 },
+	{ "EV0170", "Big gets the Power Rod", 0x0170, 1 },
+	{ "EV0171", "Big gets the Life Belt", 0x0171, 1 },
+	{ "EV0176", "Ice Stone appears (Sonic)", 0x0176, 1 },
+	{ "EV0177", "Ice Stone appears (Tails)", 0x0177, 1 },
+	{ "EV0178", "Ice Stone appears (Big)", 0x0178, 1 },
+	{ "EV0179", "Employee Card appears", 0x0179, 1 },
+	{ "EV017A", "Passage to Angel Island opens (Sonic)", 0x017A, 1 },
+	{ "EV017B", "Passage to Angel Island opens (Tails)", 0x017B, 1 },
+	{ "EV017C", "Passage to Angel Island opens (Gamma)", 0x017C, 1 },
+	{ "EV0180", "Sonic sees the Egg Carrier in Red Mountain", 0x0180, 1 },
+	{ NULL }
+};
 
 fieldflag adventureFlags[] = {
 	{ "FORCED TIME OF DAY", "Overrides the time of day for SS and MR.", 0x0, 2 },
@@ -330,6 +541,10 @@ fieldflag adventureFlags[] = {
 	{ NULL }
 };
 
+static fieldflag* flagList = adventureFlags;
+
+DataArray(char, evExecFlag, 0x3B18608, 512);
+
 const char* timeofDayStrs[] = {
 	"OFF",
 	"DAY",
@@ -343,36 +558,52 @@ const char* timeofDayStrs[] = {
 void displaySeqVarsInfo(Sint32 col, Sint32 pno) {
 	njPrintC(NJM_LOCATION(1, col++), "Mode: Field Flag Editor");
 	col++;
-	njPrintC(NJM_LOCATION(2, col++), "Toggle Adventure Field Flags.");
-	njPrintC(NJM_LOCATION(2, col++), "Z Button (RB) = BACK");
-	col++;
-	njPrintC(NJM_LOCATION(2, col++), "TIPS:");
-	njPrintC(NJM_LOCATION(2, col++), "- The game overrides some SS/MR/EC flags.");
-	njPrintC(NJM_LOCATION(2, col++), "- Clear flags lock entrances until the next stage's is on.");
-	njPrintC(NJM_LOCATION(2, col++), "- Some flags need areas reloaded before having an effect.");
+
+	if (isEventFlags) {
+		njPrintC(NJM_LOCATION(2, col++), "Toggle Event Flags.");
+		njPrintC(NJM_LOCATION(2, col++), "Z Button (RB) = BACK");
+		njPrintC(NJM_LOCATION(2, col++), "Y Button + Left/Right = Change List");
+		col++;
+		njPrintC(NJM_LOCATION(2, col++), "The game uses this list to track which events you've seen.");
+		njPrintC(NJM_LOCATION(2, col++), "It's used primarily for choosing which NPCs and hints load.");
+	}
+	else {
+		njPrintC(NJM_LOCATION(2, col++), "Toggle Adventure Field Flags.");
+		njPrintC(NJM_LOCATION(2, col++), "Z Button (RB) = BACK");
+		njPrintC(NJM_LOCATION(2, col++), "Y Button + Left/Right = Change List");
+		col++;
+		njPrintC(NJM_LOCATION(2, col++), "TIPS:");
+		njPrintC(NJM_LOCATION(2, col++), "- The game overrides some SS/MR/EC flags.");
+		njPrintC(NJM_LOCATION(2, col++), "- Clear flags lock entrances until the next stage's is on.");
+		njPrintC(NJM_LOCATION(2, col++), "- Some flags need areas reloaded before having an effect.");
+	}
 	col++;
 	Sint32 colArrow = col + cursor;
 	njPrintC(NJM_LOCATION(1, colArrow), ">");
 
 	maxID = 0;
+
 	for (Sint32 i = baseID; i < baseID + 10; ++i) {
-		if (adventureFlags[i].name == NULL) {
+		if (flagList[i].name == NULL) {
 			break;
 		}
 
-
-		if (i == 0) 
-			njPrint(NJM_LOCATION(2, col++), "%s: %s", adventureFlags[i].name, timeofDayStrs[timeOfDay_forced]);
-		else if(adventureFlags[i].maxVal > 1)
-			njPrint(NJM_LOCATION(2, col++), "[%d]%s: %d", adventureFlags[i].flagID, adventureFlags[i].name, seqVars[adventureFlags[i].flagID]);
-		else
-			njPrint(NJM_LOCATION(2, col++), "[%d]%s: %s", adventureFlags[i].flagID, adventureFlags[i].name, seqVars[adventureFlags[i].flagID] ? "ON" : "OFF");
-
+		if (isEventFlags) {
+			njPrint(NJM_LOCATION(2, col++), "[%d]%s: %s", flagList[i].flagID, flagList[i].name, evExecFlag[flagList[i].flagID] ? "ON" : "OFF");
+		}
+		else {
+			if (i == 0)
+				njPrint(NJM_LOCATION(2, col++), "%s: %s", flagList[i].name, timeofDayStrs[timeOfDay_forced]);
+			else if (flagList[i].maxVal > 1)
+				njPrint(NJM_LOCATION(2, col++), "[%d]%s: %d", flagList[i].flagID, flagList[i].name, seqVars[flagList[i].flagID]);
+			else
+				njPrint(NJM_LOCATION(2, col++), "[%d]%s: %s", flagList[i].flagID, flagList[i].name, seqVars[flagList[i].flagID] ? "ON" : "OFF");
+		}
 		++maxID;
 	}
 
 	col++;
-	njPrint(NJM_LOCATION(2, col++), "%s", adventureFlags[baseID + cursor].desc);
+	njPrint(NJM_LOCATION(2, col++), "%s", flagList[baseID + cursor].desc);
 
 }
 
@@ -382,6 +613,25 @@ void doSeqVarsEditor(Sint32 pno) {
 	Uint32 isPressorOn = per[0]->press;
 	if (per[0]->on & Buttons_Y) {
 		isPressorOn = per[0]->on & ~Buttons_Y;
+
+		//Swap between field and event flags
+		if (per[0]->press & Buttons_Right) {
+			isEventFlags = TRUE;
+			flagList = eventFlags;
+
+			if (flagList != eventFlags) {
+				cursor = baseID;
+				flagList = eventFlags;
+			}
+		}
+		else if (per[0]->press & Buttons_Left) {
+			isEventFlags = FALSE;
+
+			if (flagList != adventureFlags) {
+				cursor = baseID;
+				flagList = adventureFlags;
+			}
+		}
 	}
 
 	if (per[0]->press & Buttons_Z) {
@@ -389,33 +639,41 @@ void doSeqVarsEditor(Sint32 pno) {
 		return;
 	}
 
-	switch(isPressorOn) {
+	switch (isPressorOn) {
 	case Buttons_Right:
-		if (baseID + cursor == 0) {
-			timeOfDay_forced = NJM_MIN(3, timeOfDay_forced + 1);
-		}
-		else {
-			++seqVars[adventureFlags[baseID + cursor].flagID];
+		if (!(per[0]->on & Buttons_Y)) {
+			if (isEventFlags) {
+				evExecFlag[flagList[baseID + cursor].flagID] = evExecFlag[flagList[baseID + cursor].flagID] ? FALSE : TRUE;
+			}
+			else if (baseID + cursor == 0 && !isEventFlags) {
+				timeOfDay_forced = NJM_MIN(3, timeOfDay_forced + 1);
+			}
+			else {
+				++seqVars[flagList[baseID + cursor].flagID];
 
-			if (seqVars[adventureFlags[baseID + cursor].flagID] > adventureFlags[baseID + cursor].maxVal) {
-				seqVars[adventureFlags[baseID + cursor].flagID] = 0;
+				if (seqVars[flagList[baseID + cursor].flagID] > flagList[baseID + cursor].maxVal) {
+					seqVars[flagList[baseID + cursor].flagID] = 0;
+				}
 			}
 		}
 		break;
 	case Buttons_Left:
-		if (baseID + cursor == 0) {
-			timeOfDay_forced = NJM_MAX(0, timeOfDay_forced - 1);
-		}
-		else {
-			--seqVars[adventureFlags[baseID + cursor].flagID];
-			//Needed because tails' tornado 2 tunnel is weird and I don't want to code in skipping over IDs
+		if (!(per[0]->on & Buttons_Y)) {
+			if (isEventFlags) {
+				evExecFlag[flagList[baseID + cursor].flagID] = evExecFlag[flagList[baseID + cursor].flagID] ? FALSE : TRUE;
+			}
+			else if (baseID + cursor == 0) {
+				timeOfDay_forced = NJM_MAX(0, timeOfDay_forced - 1);
+			}
+			else {
+				--seqVars[flagList[baseID + cursor].flagID];
+				//Needed because tails' tornado 2 tunnel is weird and I don't want to code in skipping over IDs
 
-			if (seqVars[adventureFlags[baseID + cursor].flagID] < 0) {
-				seqVars[adventureFlags[baseID + cursor].flagID] = adventureFlags[baseID + cursor].maxVal;
+				if (seqVars[flagList[baseID + cursor].flagID] < 0) {
+					seqVars[flagList[baseID + cursor].flagID] = flagList[baseID + cursor].maxVal;
+				}
 			}
 		}
-
-		
 		break;
 	case Buttons_Up:
 		
@@ -428,7 +686,7 @@ void doSeqVarsEditor(Sint32 pno) {
 		break;
 	case Buttons_Down:
 		
-		if (cursor + 1 == 10 && adventureFlags[baseID + 10].name != NULL) {
+		if (cursor + 1 == 10 && flagList[baseID + 10].name != NULL) {
 			++baseID;
 		}
 		else {

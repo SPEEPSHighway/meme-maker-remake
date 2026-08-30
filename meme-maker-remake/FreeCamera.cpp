@@ -182,8 +182,15 @@ void displayCameraInfo(Sint32 col, Sint32 pno) {
 		njPrintC(NJM_LOCATION(2, col++), "STOP");
 	else
 		njPrintC(NJM_LOCATION(2, col++), "PLAY");
+
 	njPrintC(NJM_LOCATION(2, col++), "Use SHIFT+P to play queue on any mode.");
 
+	if(EV_Check()) {
+		njPrintColor(0xFFFF0000);
+		col++;
+		njPrintC(NJM_LOCATION(2, col++), "Camera playback is disabled in events.");
+		njPrintColor(0xFFFFFFFF);
+	}
 }
 
 /// <summary>
