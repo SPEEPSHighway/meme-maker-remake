@@ -185,7 +185,7 @@ void displayCameraInfo(Sint32 col, Sint32 pno) {
 
 	njPrintC(NJM_LOCATION(2, col++), "Use SHIFT+P to play queue on any mode.");
 
-	if(EV_Check()) {
+	if(EV_Check() && !eventCamPlayback) {
 		njPrintColor(0xFFFF0000);
 		col++;
 		njPrintC(NJM_LOCATION(2, col++), "Camera playback is disabled in events.");
@@ -375,7 +375,7 @@ void resetPlaybackCam() {
 }
 
 void playPlaybackCam() {
-	if (!EV_Check()) {
+	if (!EV_Check() || eventCamPlayback) {
 		if (!cameraOnPlayback) {
 			cameraOnPlayback = TRUE;
 
@@ -465,9 +465,12 @@ void processPlaybackCam() {
 			}
 
 			//goto next cam after frames are up
-			if (!cam->frame--) {
+			if (cam->frame <= 0) {
 				++pbCamCount;
 			}
+
+			//Decrement frame count
+			cam->frame -= loop_const;
 		}
 	}
 }

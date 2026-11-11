@@ -470,7 +470,7 @@ anim_entry animList[] = {
 	{ ANIM_BIG, 0x3C84A40, "action_b_b0012_big", "BIG", &texlist_big },
 	{ ANIM_BIG, 0x3C84A30, "action_b_b0013_big", "BIG", &texlist_big },
 	{ ANIM_BIG, 0x3C84A28, "action_b_b0014_big", "BIG", &texlist_big },
-	{ ANIM_BIG, 0x3C84FD4, "action_b_b0020_big", "BIG", &texlist_big },
+	{ ANIM_BIG, 0x3C84FCC, "action_b_b0020_big", "BIG", &texlist_big },
 	{ ANIM_BIG, 0x3C84FE4, "action_b_b0022_big", "BIG", &texlist_big },
 	{ ANIM_BIG, 0x3C84C2C, "action_b_b0027_big", "BIG", &texlist_big },
 	{ ANIM_BIG, 0x3C84C14, "action_b_b0028_big", "BIG", &texlist_big },

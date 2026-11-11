@@ -290,9 +290,6 @@ void displayEventInfo(Sint32 col, Sint32 pno) {
 	case FUNC_LAST1A:
 		njPrintC(NJM_LOCATION(2, col++), "Perfect Chaos Only.");
 		njPrint(NJM_LOCATION(2, col++), "Loaded: %s", p_Last1AHighTask ? "TRUE" : "FALSE");
-		if (playerpwp[pno] && playertwp[pno]->counter.b[1] == PLNO_SONIC) {
-			njPrint(NJM_LOCATION(2, col++), "Super Sonic: %s", playerpwp[pno]->equipment & 0x8000 ? "Y" : "N");
-		}
 		break;
 	case FUNC_CHAOS0:
 		njPrintC(NJM_LOCATION(2, col++), "Spawn Chaos 0.");
@@ -627,27 +624,6 @@ void advanceEventEffects() {
 		wPillar_clear();
 }
 
-void toggleSuperSonic(Sint32 pno) {
-	if (maker_mode == 6 && playerpwp[pno] && playertwp[pno]->counter.b[1] == PLNO_SONIC) {
-		if (playerpwp[pno]->equipment & 0x8000) {
-			playerpwp[pno]->equipment &= ~0x8000;
-
-			if (playertwp[pno]->mode != 99) {
-				playertwp[pno]->mode = 1;
-				SetInputP(pno, 24); //Prevent smode lingering and causing him to re-transform in certain situations.
-				
-			}
-		}
-		else if (playertwp[pno]->mode != 99) {
-			if (GetStageNumber() != 0x1300) {
-				texLoadTexturePvmFile("SUPERSONIC", &SUPERSONIC_TEXLIST);
-			}
-
-			SetInputP(pno, 46);
-		}
-	}
-}
-
 void eventFunctionsMain(Sint32 pno) {
 
 	//ID controls
@@ -754,13 +730,7 @@ void eventFunctionsMain(Sint32 pno) {
 				cursor = 7;
 			break;
 		case FUNC_LAST1A:
-			cursor = NJM_MIN(4, cursor);
-			if (cursor > 1 && cursor < 4)
-				cursor = 4;
-
-			if (cursor > 1 && playertwp[pno]->counter.b[1] != PLNO_SONIC) {
-				cursor = 1;
-			}
+			cursor = 1;
 			break;
 		default:
 			cursor = NJM_MIN(1, cursor);
@@ -813,9 +783,6 @@ void eventFunctionsMain(Sint32 pno) {
 				break;
 			case FUNC_CAPTURE:
 				capture_follow = capture_follow != 1;
-				break;
-			case FUNC_LAST1A:
-				toggleSuperSonic(pno);
 				break;
 			}
 		case 7: //only used by wpillar
@@ -871,9 +838,6 @@ void eventFunctionsMain(Sint32 pno) {
 				break;
 			case FUNC_CAPTURE:
 				capture_follow = capture_follow != 1;
-				break;
-			case FUNC_LAST1A:
-				toggleSuperSonic(pno);
 				break;
 			}
 		case 7: //only used by wpillar

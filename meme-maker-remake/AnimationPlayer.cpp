@@ -3,13 +3,13 @@
 #include "ObjectImport.h"
 #include "Keys.h"
 
-Sint8 ap_character_no;
-Sint32 ap_anim_no;
-Sint32 ap_anim_no_base;
+Sint8 ap_character_no[8];
+Sint32 ap_anim_no[8];
+Sint32 ap_anim_no_base[8];
 Sint32 link_num = 8;
 NJS_ACTION** gameplay_anim;
-static Float animSpeed = 0.5f;
-static Float animSpeedRate = 0.1f;
+static Float animSpeed[8] = { 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, };
+static Float animSpeedRate[8] = { 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f };
 static Float hammerScale;
 Bool charlist_Error;
 Bool isLoop;
@@ -18,7 +18,7 @@ Bool giveMeTheBird;
 Bool tailsTails;
 
 
-static Sint32 animEditID = 1;
+static Sint32 animEditID[8] = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
 std::string AnimFolderPath;
 std::string selectedCustomAnim;
@@ -47,10 +47,10 @@ void setAnimFolder(std::string folderpath) {
 /// <summary>
 /// Check if it's one of the gameplay animation categories since they're stored differently.
 /// </summary>
-Sint32 isGameplayOrCustomAnim() {
-	if (ap_anim_no_base < 6) //Gameplay
+Sint32 isGameplayOrCustomAnim(Sint32 pno) {
+	if (ap_anim_no_base[pno] < 6) //Gameplay
 		return TYPE_GAMEPLAY;
-	else if (ap_anim_no_base < 14) //Custom
+	else if (ap_anim_no_base[pno] < 14) //Custom
 		return TYPE_CUSTOM;
 	else
 		return TYPE_EVENT; //Event
@@ -74,7 +74,7 @@ void displayAnimInfo(Sint32 col, Sint32 pno) {
 	}
 	njPrint(NJM_LOCATION(2, col++), "Animations stored: %d", storedNum);
 	col++;
-	Sint32 colArrow = col + animEditID;
+	Sint32 colArrow = col + animEditID[pno];
 	njPrintC(NJM_LOCATION(1, colArrow), ">");
 	njPrintC(NJM_LOCATION(2, col++), "BACK");
 
@@ -82,22 +82,22 @@ void displayAnimInfo(Sint32 col, Sint32 pno) {
 		njPrint(NJM_LOCATION(2, col++), "Interpolation frames = %d", link_num);
 	else
 		njPrint(NJM_LOCATION(2, col++), "Loop: %s", isLoop ? "ON" : "OFF");
-	njPrint(NJM_LOCATION(2, col++), "Character: %s", character_name[ap_character_no].c_str());
+	njPrint(NJM_LOCATION(2, col++), "Character: %s", character_name[ap_character_no[pno]].c_str());
 	if (charlist_Error) { //Need to clarify this wasn't updated due to the below error
 		njPrintColor(0xFFFF0000);
 	}
 
-	switch (isGameplayOrCustomAnim()) {
+	switch (isGameplayOrCustomAnim(pno)) {
 	case TYPE_EVENT:
-		njPrint(NJM_LOCATION(2, col++), "Animation: 0x%04X (%d)", animList[ap_anim_no].action, ap_anim_no - ap_anim_no_base);
-		njPrint(NJM_LOCATION(3, col++), "Name: %s", animList[ap_anim_no].name.c_str());
+		njPrint(NJM_LOCATION(2, col++), "Animation: 0x%04X (%d)", animList[ap_anim_no[pno]].action, ap_anim_no[pno] - ap_anim_no_base[pno]);
+		njPrint(NJM_LOCATION(3, col++), "Name: %s", animList[ap_anim_no[pno]].name.c_str());
 		break;
 	case TYPE_GAMEPLAY:
-		njPrint(NJM_LOCATION(2, col++), "Animation: %d", ap_anim_no);
-		njPrint(NJM_LOCATION(3, col++), "Name: %s[%d]", animList[ap_anim_no_base].name.c_str(), ap_anim_no);
+		njPrint(NJM_LOCATION(2, col++), "Animation: %d", ap_anim_no[pno]);
+		njPrint(NJM_LOCATION(3, col++), "Name: %s[%d]", animList[ap_anim_no_base[pno]].name.c_str(), ap_anim_no[pno]);
 		break;
 	case TYPE_CUSTOM:
-		njPrint(NJM_LOCATION(2, col++), "Animation: %d", ap_anim_no);
+		njPrint(NJM_LOCATION(2, col++), "Animation: %d", ap_anim_no[pno]);
 		njPrint(NJM_LOCATION(3, col++), "Name: %s", selectedCustomAnim.c_str());
 		break;
 	}
@@ -106,8 +106,8 @@ void displayAnimInfo(Sint32 col, Sint32 pno) {
 		njPrintC(NJM_LOCATION(40, col), "ERROR: Could not find start of anim list.");
 		njPrintColor(0xFFFFFFFF);
 	}
-	njPrint(NJM_LOCATION(2, col++), "Movement Speed = %.3f", animSpeed);
-	njPrint(NJM_LOCATION(2, col++), "Adjust Rate = %.3f", animSpeedRate);
+	njPrint(NJM_LOCATION(2, col++), "Movement Speed = %.3f", animSpeed[pno]);
+	njPrint(NJM_LOCATION(2, col++), "Adjust Rate = %.3f", animSpeedRate[pno]);
 
 	if (playertwp[pno]) {
 		switch (playertwp[pno]->counter.b[1])
@@ -151,12 +151,12 @@ Bool checkPlaylistExists(Sint32 pno) {
 /// <summary>
 /// Find where to start the anim list when switching characters
 /// </summary>
-void findCharAnimsBase() {
+void findCharAnimsBase(Sint32 pno) {
 	for (Sint32 i = 0; animList[i].type != ANIM_MAX; ++i) {
-		if (animList[i].type == ap_character_no) {
+		if (animList[i].type == ap_character_no[pno]) {
 			charlist_Error = FALSE;
-			ap_anim_no = i;
-			ap_anim_no_base = i;
+			ap_anim_no[pno] = i;
+			ap_anim_no_base[pno] = i;
 			return;
 		}
 	}
@@ -223,7 +223,7 @@ void EV_StoreAction(task* tp, NJS_ACTION* ap, NJS_TEXLIST* lp, Float speed, Sint
 	actionlist->linkframe = linkframe;
 	actionlist->action = *ap;
 	actionlist->texlist = lp;
-	actionlist->speed = animSpeed;
+	actionlist->speed = speed;
 }
 
 ///Sonic's pointing finger
@@ -273,35 +273,35 @@ void makerAnim_OtherSonics(NJS_ACTION* anim, NJS_TEXLIST** texlist, const char**
 void processAnim(Sint32 pno, Bool isStore) {
 
 	//Set up texlist
-	NJS_TEXLIST* texlist = animList[ap_anim_no_base].texlist;
-	const char* texname = animList[ap_anim_no_base].texname;
+	NJS_TEXLIST* texlist = animList[ap_anim_no_base[pno]].texlist;
+	const char* texname = animList[ap_anim_no_base[pno]].texname;
 
-	if (isGameplayOrCustomAnim() == TYPE_EVENT) {
-		texlist = animList[ap_anim_no].texlist;
-		texname = animList[ap_anim_no].texname;
+	if (isGameplayOrCustomAnim(pno) == TYPE_EVENT) {
+		texlist = animList[ap_anim_no[pno]].texlist;
+		texname = animList[ap_anim_no[pno]].texname;
 	}
 
 
 	//Store the final anim here.
 	NJS_ACTION animation{};
 
-	switch (isGameplayOrCustomAnim()) {
+	switch (isGameplayOrCustomAnim(pno)) {
 	case TYPE_GAMEPLAY:
 	{
-		NJS_ACTION** anim = (NJS_ACTION**)animList[ap_anim_no_base].action;
+		NJS_ACTION** anim = (NJS_ACTION**)animList[ap_anim_no_base[pno]].action;
 
-		if (anim[ap_anim_no]) {
-			animation = *anim[ap_anim_no];
+		if (anim[ap_anim_no[pno]]) {
+			animation = *anim[ap_anim_no[pno]];
 		}
 		break;
 	}
 	case TYPE_EVENT:
 	{
-		NJS_ACTION* anim = (NJS_ACTION*)animList[ap_anim_no].action;
+		NJS_ACTION* anim = (NJS_ACTION*)animList[ap_anim_no[pno]].action;
 		
 		//Planes need to be read from a reference to be compatible with DC characters.
-		if (animList[ap_anim_no].type == ANIM_PLANE) {
-			anim = *(NJS_ACTION**)animList[ap_anim_no].action;
+		if (animList[ap_anim_no[pno]].type == ANIM_PLANE) {
+			anim = *(NJS_ACTION**)animList[ap_anim_no[pno]].action;
 		}
 
 
@@ -312,8 +312,8 @@ void processAnim(Sint32 pno, Bool isStore) {
 	}
 	case TYPE_CUSTOM:
 	{
-		NJS_ACTION** anim = (NJS_ACTION**)animList[ap_anim_no_base].action;
-		std::string animstr = animList[ap_anim_no_base].name + selectedCustomAnim;
+		NJS_ACTION** anim = (NJS_ACTION**)animList[ap_anim_no_base[pno]].action;
+		std::string animstr = animList[ap_anim_no_base[pno]].name + selectedCustomAnim;
 		NJS_MOTION* mtn = importSAANIM(&anidata[0], animstr.c_str());
 
 		if (anim[0]->object && mtn) {
@@ -339,9 +339,9 @@ void processAnim(Sint32 pno, Bool isStore) {
 
 		//Store or play
 		if (isStore)
-			EV_StoreAction(playertp[pno], &animation, texlist, animSpeed, 0, link_num);
+			EV_StoreAction(playertp[pno], &animation, texlist, animSpeed[pno], 0, link_num);
 		else
-			EV_SetAction(playertp[pno], &animation, texlist, animSpeed, isLoop, link_num);
+			EV_SetAction(playertp[pno], &animation, texlist, animSpeed[pno], isLoop, link_num);
 	}
 
 
@@ -412,10 +412,10 @@ static void doAnimKeyboardControls(Sint32 pno) {
 
 	//Movement Speed
 	if (KeyGetOn(KEYS_MINUS)) {
-		animSpeed = NJM_MAX(0.0f, animSpeed - animSpeedRate);
+		animSpeed[pno] = NJM_MAX(0.0f, animSpeed[pno] - animSpeedRate[pno]);
 	}
 	else if (KeyGetOn(KEYS_PLUS)) {
-		animSpeed = NJM_MIN(10000.0f, animSpeed + animSpeedRate);
+		animSpeed[pno] = NJM_MIN(10000.0f, animSpeed[pno] + animSpeedRate[pno]);
 	}
 
 	if (KeyGetOn(KEYS_RSHIFT)) {
@@ -430,10 +430,10 @@ static void doAnimKeyboardControls(Sint32 pno) {
 	else {
 		//Adjust Rate
 		if (KeyGetOn(KEYS_LBRACKET)) {
-			animSpeedRate = NJM_MAX(0.0f, animSpeedRate - 0.001f);
+			animSpeedRate[pno] = NJM_MAX(0.0f, animSpeedRate[pno] - 0.001f);
 		}
 		else if (KeyGetOn(KEYS_RBRACKET)) {
-			animSpeedRate = NJM_MIN(1.0f, animSpeedRate + 0.001f);
+			animSpeedRate[pno] = NJM_MIN(1.0f, animSpeedRate[pno] + 0.001f);
 		}
 	}
 
@@ -514,13 +514,13 @@ void doAnimPlayer(Sint32 pno) {
 
 	//Search for the current character's designated areas if this is a player anim
 	if (playertwp[pno]) {
-		if (ap_character_no < ANIM_ZERO && playerCharNos[ap_character_no][0] != playertwp[pno]->counter.b[1]) {
+		if (ap_character_no[pno] < ANIM_ZERO && playerCharNos[ap_character_no[pno]][0] != playertwp[pno]->counter.b[1]) {
 			for (Sint32 i = 0; i < ANIM_ZERO; ++i) {
 				if (playerCharNos[i][0] == playertwp[pno]->counter.b[1]) {
-					ap_character_no = i;
-					findCharAnimsBase();
-					if (isGameplayOrCustomAnim()) //Reset anim number if gameplay anim
-						ap_anim_no = 0;
+					ap_character_no[pno] = i;
+					findCharAnimsBase(pno);
+					if (isGameplayOrCustomAnim(pno)) //Reset anim number if gameplay anim
+						ap_anim_no[pno] = 0;
 					break;
 				}
 			}
@@ -528,16 +528,16 @@ void doAnimPlayer(Sint32 pno) {
 	}
 
 
-	if (isGameplayOrCustomAnim() == TYPE_CUSTOM) {
-		std::string folder = AnimFolderPath + animList[ap_anim_no_base].name;
+	if (isGameplayOrCustomAnim(pno) == TYPE_CUSTOM) {
+		std::string folder = AnimFolderPath + animList[ap_anim_no_base[pno]].name;
 
 		//Update current prop selection
-		getNameOfFile(&selectedCustomAnim, folder, ap_anim_no, FALSE);
+		getNameOfFile(&selectedCustomAnim, folder, ap_anim_no[pno], FALSE);
 
 		/* Set the upper limit for propID.
 		   If selectedPropFolder is empty (You deleted a folder) then adjust propID accordingly.*/
-		if (selectedCustomAnim == "" && ap_anim_no > 0) {
-			getNameOfFile(&selectedCustomAnim, folder, --ap_anim_no, FALSE);
+		if (selectedCustomAnim == "" && ap_anim_no[pno] > 0) {
+			getNameOfFile(&selectedCustomAnim, folder, --ap_anim_no[pno], FALSE);
 		}
 	}
 
@@ -555,7 +555,7 @@ void doAnimPlayer(Sint32 pno) {
 
 
 	if (per[0]->press & Buttons_Z) {
-		if (animEditID == 10) {
+		if (animEditID[pno] == 10) {
 
 			Sint32 storedNum = 0;
 			for (EVENT_ACTION_LIST* list = playlist[pno]; list; list = list->next) {
@@ -570,7 +570,7 @@ void doAnimPlayer(Sint32 pno) {
 				playlist[pno] = NULL;
 			}
 		}
-		else if (animEditID == 11) {
+		else if (animEditID[pno] == 11) {
 			EV_ClrAction(playertp[pno]);
 			EV_ClearPlaylist(playlist[pno]);
 			playlist[pno] = NULL;
@@ -580,7 +580,7 @@ void doAnimPlayer(Sint32 pno) {
 
 	switch (isPressorOn) {
 	case Buttons_Right:
-		switch (animEditID) {
+		switch (animEditID[pno]) {
 		case 1:
 			if (playlist[pno])
 				link_num = NJM_MIN(100, link_num + 1);
@@ -588,41 +588,41 @@ void doAnimPlayer(Sint32 pno) {
 				isLoop = isLoop != 1;
 			break;
 		case 2:
-			if (character_name[ap_character_no + 1].size()) {
-				if (ap_character_no++ < ANIM_ZERO && playerCharNos[ap_character_no][0] != playertwp[pno]->counter.b[1]) {
+			if (character_name[ap_character_no[pno] + 1].size()) {
+				if (ap_character_no[pno]++ < ANIM_ZERO && playerCharNos[ap_character_no[pno]][0] != playertwp[pno]->counter.b[1]) {
 					//Big and Gamma have secondary objects that cause problems, so don't let them be non-players.
 					if (playertwp[pno]->counter.b[1] != PLNO_E102 && playertwp[pno]->counter.b[1] != PLNO_BIG) {
-						ap_character_no = ANIM_ZERO;
+						ap_character_no[pno] = ANIM_ZERO;
 					}
 					else {
-						--ap_character_no;
+						--ap_character_no[pno];
 					}
 				}
 
-				findCharAnimsBase();
+				findCharAnimsBase(pno);
 			}
 			break;
 		case 3:
 		{
-			Sint32 newAnim = KeyGetOn(KEYS_RSHIFT) ? ap_anim_no + 10 : ap_anim_no + 1;
+			Sint32 newAnim = KeyGetOn(KEYS_RSHIFT) ? ap_anim_no[pno] + 10 : ap_anim_no[pno] + 1;
 
 
-			switch (isGameplayOrCustomAnim()) {
+			switch (isGameplayOrCustomAnim(pno)) {
 			case TYPE_EVENT:
-				if (animList[newAnim].action && animList[newAnim].type == ap_character_no) {
-					ap_anim_no = newAnim;
+				if (animList[newAnim].action && animList[newAnim].type == ap_character_no[pno]) {
+					ap_anim_no[pno] = newAnim;
 				}
 				break;
 			case TYPE_GAMEPLAY:
 			{
-				NJS_ACTION** anim = (NJS_ACTION**)animList[ap_anim_no_base].action;
-				if (newAnim <= anim_gameplay_size[ap_anim_no_base]) {
-					++ap_anim_no;
+				NJS_ACTION** anim = (NJS_ACTION**)animList[ap_anim_no_base[pno]].action;
+				if (newAnim <= anim_gameplay_size[ap_anim_no_base[pno]]) {
+					++ap_anim_no[pno];
 				}
 				break;
 			}
 			case TYPE_CUSTOM:
-				++ap_anim_no;
+				++ap_anim_no[pno];
 				break;
 			}
 
@@ -630,10 +630,10 @@ void doAnimPlayer(Sint32 pno) {
 			break;
 		}
 		case 5:
-			animSpeed = NJM_MIN(10000.0f, animSpeed + animSpeedRate);
+			animSpeed[pno] = NJM_MIN(10000.0f, animSpeed[pno] + animSpeedRate[pno]);
 			break;
 		case 6:
-			animSpeedRate = NJM_MIN(1.0f, animSpeedRate + 0.001f);
+			animSpeedRate[pno] = NJM_MIN(1.0f, animSpeedRate[pno] + 0.001f);
 			break;
 		case 7:
 			if (playertwp[pno]) {
@@ -656,7 +656,7 @@ void doAnimPlayer(Sint32 pno) {
 		}
 		break;
 	case Buttons_Left:
-		switch (animEditID) {
+		switch (animEditID[pno]) {
 		case 1:
 			if (playlist[pno])
 				link_num = NJM_MAX(0, link_num - 1);
@@ -664,42 +664,42 @@ void doAnimPlayer(Sint32 pno) {
 				isLoop = isLoop != 1;
 			break;
 		case 2:
-			ap_character_no = NJM_MAX(0, ap_character_no - 1);
-			if (ap_character_no < ANIM_ZERO && playerCharNos[ap_character_no][0] != playertwp[pno]->counter.b[1]) {
-				for (Sint32 i = ap_character_no + 1; i; --i) {
+			ap_character_no[pno] = NJM_MAX(0, ap_character_no[pno] - 1);
+			if (ap_character_no[pno] < ANIM_ZERO && playerCharNos[ap_character_no[pno]][0] != playertwp[pno]->counter.b[1]) {
+				for (Sint32 i = ap_character_no[pno] + 1; i; --i) {
 					if (playerCharNos[i][0] == playertwp[pno]->counter.b[1]) {
-						ap_character_no = i;
+						ap_character_no[pno] = i;
 						break;
 					}
 				}
 			}
 
-			findCharAnimsBase();
+			findCharAnimsBase(pno);
 
-			if (isGameplayOrCustomAnim()) //Reset anim number if gameplay anim
-				ap_anim_no = 0;
+			if (isGameplayOrCustomAnim(pno)) //Reset anim number if gameplay anim
+				ap_anim_no[pno] = 0;
 			break;
 		case 3:
 		{
-			Sint32 newAnim = KeyGetOn(KEYS_RSHIFT) ? ap_anim_no - 10 : ap_anim_no - 1;
-			switch (isGameplayOrCustomAnim()) {
+			Sint32 newAnim = KeyGetOn(KEYS_RSHIFT) ? ap_anim_no[pno] - 10 : ap_anim_no[pno] - 1;
+			switch (isGameplayOrCustomAnim(pno)) {
 			case TYPE_EVENT:
-				if (animList[newAnim].type == ap_character_no) {
-					ap_anim_no = NJM_MAX(ap_anim_no_base, newAnim);
+				if (animList[newAnim].type == ap_character_no[pno]) {
+					ap_anim_no[pno] = NJM_MAX(ap_anim_no_base[pno], newAnim);
 				}
 				break;
 			case TYPE_GAMEPLAY:
 			case TYPE_CUSTOM:
-				ap_anim_no = NJM_MAX(0, newAnim);
+				ap_anim_no[pno] = NJM_MAX(0, newAnim);
 				break;
 			}
 			break;
 		}
 		case 5:
-			animSpeed = NJM_MAX(0.0f, animSpeed - animSpeedRate);
+			animSpeed[pno] = NJM_MAX(0.0f, animSpeed[pno] - animSpeedRate[pno]);
 			break;
 		case 6:
-			animSpeedRate = NJM_MAX(0.0f, animSpeedRate - 0.001f);
+			animSpeedRate[pno] = NJM_MAX(0.0f, animSpeedRate[pno] - 0.001f);
 			break;
 		case 7:
 			if (playertwp[pno]) {
@@ -724,30 +724,30 @@ void doAnimPlayer(Sint32 pno) {
 		}
 		break;
 	case Buttons_Up:
-		animEditID = NJM_MAX(0, animEditID - 1);
+		animEditID[pno] = NJM_MAX(0, animEditID[pno] - 1);
 
-		if (animEditID > list_firstmax && animEditID < 10) {
-			animEditID = list_firstmax;
+		if (animEditID[pno] > list_firstmax && animEditID[pno] < 10) {
+			animEditID[pno] = list_firstmax;
 		}
 
-		if (animEditID == 4) //Skip over the name part
-			--animEditID;
+		if (animEditID[pno] == 4) //Skip over the name part
+			--animEditID[pno];
 		break;
 	case Buttons_Down:
-		animEditID = NJM_MIN(12, animEditID + 1);
+		animEditID[pno] = NJM_MIN(12, animEditID[pno] + 1);
 
-		if (animEditID > list_firstmax && animEditID < 10) {
-			animEditID = 10;
+		if (animEditID[pno] > list_firstmax && animEditID[pno] < 10) {
+			animEditID[pno] = 10;
 		}
 
 		
-		if (animEditID == 4) //Skip over the name part
-			++animEditID;
+		if (animEditID[pno] == 4) //Skip over the name part
+			++animEditID[pno];
 		break;
 	}
 
-	if (per[0]->press & Buttons_Y && animEditID == 0) {
-		animEditID = 1;
+	if (per[0]->press & Buttons_Y && animEditID[pno] == 0) {
+		animEditID[pno] = 1;
 		maker_mode = 0;
 		return;
 	}
@@ -755,13 +755,13 @@ void doAnimPlayer(Sint32 pno) {
 	//Store/Play
 	if (per[0]->press & Buttons_Z) {
 
-		if (animEditID < 10) {
+		if (animEditID[pno] < 10) {
 			if (per[0]->on & Buttons_Y)
 				storeAnim(pno);
 			else
 				playAnimSingle(pno);
 		}
-		else if (animEditID == 12) {
+		else if (animEditID[pno] == 12) {
 			playAnimQueue(pno);
 		}
 	}
@@ -778,8 +778,8 @@ void doAnimPlayer(Sint32 pno) {
 		EV_ClearPlaylist(playlist[pno]);
 		playlist[pno] = NULL;
 
-		animSpeed = 0.5f;
-		animSpeedRate = 0.01f;
+		animSpeed[pno] = 0.5f;
+		animSpeedRate[pno] = 0.01f;
 		link_num = 8;
 		hammerScale = 0.0f;
 		SONIC_OBJECTS[6]->sibling = SONIC_OBJECTS[5];

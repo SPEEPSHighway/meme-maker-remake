@@ -42,7 +42,11 @@ extern "C"
 		"You don't have enough memory in the memory card.",
 		"melik: no",
 		"Why don't you try going to the Casino?",
-		"I wonder what happened to Gary?"
+		"I wonder what happened to Gary?",
+		"Knuckles (3rd Place Community) Trophy Winner @ SHC 2026!",
+		"Metal Sonic (Most Innovative) Trophy Winner @ SHC 2026!",
+		"Professor Pickle (Most Entertaining) Trophy Winner @ SHC 2026!",
+		"Polygon Jim (Most \"WTF?!\") Trophy Winner @ SHC 2026!",
 	};
 
 	#define QUOTES_SIZE sizeof(quotes) / sizeof(quotes[0])
@@ -51,9 +55,11 @@ extern "C"
 	Bool makerActive;
 	Bool showDisplay = TRUE;
 	Bool allowCharScl;
+	Bool eventCamPlayback;
 	Bool Testing;
 	Sint32 maker_mode;
 	Sint32 pno;
+	Bool isInvisible[8];
 
 	//Config
 	Bool enableNPCDisp;
@@ -102,10 +108,26 @@ extern "C"
 	static FunctionHook<void, Sint32> KillHimP_hook(KillHimP);
 	static FunctionHook<void, char> DamegeRingScatter_hook(DamegeRingScatter);
 	static FunctionHook<void, taskwk*, taskwk*> CCL_CalcColliPO_hook(_CCL_CalcColliPO);
+	static FunctionHook<void, Angle> SetViewAngle_hook(SetViewAngle);
+	static FunctionHook<void, task*> DeadOut_hook(DeadOut);
+
+
+	static FunctionHook<void, task*> SonicDisplay_hook(SonicDisplay);
+	static FunctionHook<void, task*> MilesDisplay_hook(MilesDisplay);
+	static FunctionHook<void, task*> KnucklesDisplay_hook(KnucklesDisplay);
+	static FunctionHook<void, task*> AmyDisplay_hook(AmyDisplay);
+	static FunctionHook<void, task*> BigDisplay_hook(BigDisplay);
+	static FunctionHook<void, task*> E102Display_hook(E102Display);
+	static FunctionHook<void, taskwk*, shadowwk*> CharacterShadow_hook(CharacterShadow);
+	static FunctionHook<Float, taskwk*, Float> Shadow_hook(Shadow);
+
 
 	//Hooked functions
 
 	FunctionPointer(void, DrawEventAction, (taskwk* twp), 0x4187D0);
+	FunctionPointer(void, TikalDisplay, (task* twp), 0x7B33A0);
+
+	static FunctionHook<void, task*> TikalDisplay_hook(TikalDisplay);
 
 	void scaleCharacters(taskwk* twp) {
 		njScaleV(0, &twp->scl);
@@ -178,6 +200,7 @@ extern "C"
 				break;
 			case PLNO_AMY:
 				WriteData<1>((Uint8*)0x487574, 0x00);
+				WriteData<1>((Uint8*)0x487574, 0x00);
 				break;
 			default:
 				break;
@@ -188,6 +211,70 @@ extern "C"
 	};
 
 
+	//Only draw shadows for visible players (Not check for invisible ultimate life forms)
+	void checkInvisibleShadow(taskwk* twp, shadowwk* swp) {
+		if (twp && twp->counter.b[0] < 8 && (!isInvisible[twp->counter.b[0]] || !makerActive)) {
+			CharacterShadow_hook.Original(twp, swp);
+		}
+	}
+	//Same as above but for Gamma
+	Float checkInvisibleShadowE102(taskwk* twp, Float scl) {
+
+		for (Sint32 i = 0; i < 8; ++i) {
+			if (playertwp[i] == twp) {
+				if (twp && twp->counter.b[0] < 8 && (!isInvisible[twp->counter.b[0]] || !makerActive)) {
+					break;
+				}
+				else {
+					return 0.0f;
+				}
+			}
+		}
+
+		return Shadow_hook.Original(twp, scl);
+	}
+
+
+	//Only draw visible players or if the editor isn't on
+	void checkInvisible(task* tp) {
+		if (tp && tp->twp) {
+			if (tp->twp->counter.b[0] < 8 && (!isInvisible[tp->twp->counter.b[0]] || !makerActive)) {
+				switch (tp->twp->counter.b[1]) {
+				case PLNO_SONIC:
+					SonicDisplay_hook.Original(tp);
+					break;
+				case PLNO_TAILS:
+					MilesDisplay_hook.Original(tp);
+					break;
+				case PLNO_KNUCKLES:
+					KnucklesDisplay_hook.Original(tp);
+					break;
+				case PLNO_TIKAL:
+					TikalDisplay_hook.Original(tp);
+					break;
+				case PLNO_AMY:
+					AmyDisplay_hook.Original(tp);
+					break;
+				case PLNO_BIG:
+					BigDisplay_hook.Original(tp);
+					break;
+				case PLNO_E102:
+					E102Display_hook.Original(tp);
+					break;
+				default:
+					break;
+				 }
+			}
+		}
+	}
+	
+
+	//Stop changing FOV while the editor is active.
+	void stopFOVchange(Sint32 new_view_angle) {
+		if (!makerActive) {
+			SetViewAngle_hook.Original(new_view_angle);
+		}
+	}
 
 	//Remove pesky object collision that gets in the way of free move
 	void objectColliRemoval(taskwk* twp1, taskwk* twp2) {
@@ -337,6 +424,28 @@ static Bool checkNPCDisp() {
 	}
 }
 
+//Turn Super Sonic on or off
+void toggleSuperSonic(Sint32 pno) {
+	if (playerpwp[pno] && playertwp[pno]->counter.b[1] == PLNO_SONIC) {
+		if (playerpwp[pno]->equipment & 0x8000) {
+			playerpwp[pno]->equipment &= ~0x8000;
+
+			if (playertwp[pno]->mode != 99) {
+				playertwp[pno]->mode = 1;
+				SetInputP(pno, 24); //Prevent smode lingering and causing him to re-transform in certain situations.
+
+			}
+		}
+		else if (playertwp[pno]->mode != 99) {
+			if (GetStageNumber() != 0x1300) {
+				texLoadTexturePvmFile("SUPERSONIC", &SUPERSONIC_TEXLIST);
+			}
+
+			SetInputP(pno, 46);
+		}
+	}
+}
+
 //Enable FLAG_EVENT_HINTBOX_DISP outside events.
 static Bool checkHintDisp() {
 	if (enableNPCDisp) {
@@ -346,6 +455,17 @@ static Bool checkHintDisp() {
 		return EV_CheckCansel();
 	}
 }
+
+//DeadOut will crash the game if a SET task is spawned as a non-SET. Needed to despawn carts without crashing.
+static void fixCartDeadOut(task* tp) {
+	if (tp->ocp) {
+		DeadOut_hook.Original(tp);
+	}
+	else {
+		tp->exec = DestroyTask;
+	}
+}
+
 
 	__declspec(dllexport) ModInfo SADXModInfo = { ModLoaderVer };
 	__declspec(dllexport) void __cdecl Init(const char* path, const HelperFunctions& helperFunctions)
@@ -358,6 +478,21 @@ static Bool checkHintDisp() {
 
 		//Game doesn't store pointers to player heads so the mod needs to collect them itself
 		hookHead();
+
+		//Hook all player display funcs for visibility
+		SonicDisplay_hook.Hook(checkInvisible);
+		MilesDisplay_hook.Hook(checkInvisible);
+		KnucklesDisplay_hook.Hook(checkInvisible);
+		TikalDisplay_hook.Hook(checkInvisible);
+		AmyDisplay_hook.Hook(checkInvisible);
+		BigDisplay_hook.Hook(checkInvisible);
+		E102Display_hook.Hook(checkInvisible);
+		CharacterShadow_hook.Hook(checkInvisibleShadow);
+		Shadow_hook.Hook(checkInvisibleShadowE102);
+
+
+		DeadOut_hook.Hook(fixCartDeadOut);
+
 
 
 
@@ -374,6 +509,9 @@ static Bool checkHintDisp() {
 
 		//Setup for disabling object collision
 		CCL_CalcColliPO_hook.Hook(objectColliRemoval);
+		
+		//Setup for preventing FOV changes in the editor.
+		SetViewAngle_hook.Hook(stopFOVchange);
 
 		//Ini Configuration
 		const IniFile* config = new IniFile(std::string(path) + "\\config.ini");
@@ -384,12 +522,16 @@ static Bool checkHintDisp() {
 		allowDeath = config->getBool("General", "AllowDeath", false);
 		setCamSpdBool(config->getBool("General", "UncappedCamRotSpd", false));
 		allowCharScl = config->getBool("General", "EnableCharScl", false);
+		eventCamPlayback = config->getBool("General", "EventCamPlayback", false);
 
 		//Set up forcing time of day
 		SeqGetTime_hook.Hook(forceTimeOfDay);
 
 		//Back up face animation frame data
 		initFaceTableBackup();
+
+
+
 
 		// Always initialize Super Sonic welds. (Stolen from the super sonic mod lol)
 		WriteData<2>(reinterpret_cast<Uint8*>(0x0049AC6A), 0x90i8);
@@ -423,7 +565,6 @@ static Bool checkHintDisp() {
 			WriteCall((void*)0x48756B, scaleCharacters); //amy
 			WriteCall((void*)0x7B3480, scaleCharacters); //tikl
 		}
-
 
 		//Enable Hint box disp flag everywhere if set in config.
 		WriteCall((void*)0x7A9BD4, checkHintDisp);
@@ -474,15 +615,49 @@ static Bool checkHintDisp() {
 		quotes_rnd = (Sint32)(ulGlobalTimer % (Sint32)(QUOTES_SIZE));
 	}
 
+	FunctionPointer(void, SetPlayerSnowBoard, (task* tp), 0x4E9660);
+	FunctionPointer(void, SonicSnowBoard, (task* tp), 0x4959E0);
+	FunctionPointer(void, MilesSnowBoard, (task* tp), 0x461510);
+	DataArray(Sint16, _color, 0x38A7034, 10);
+
 	/// <summary>
 	/// Resets player's mode. Super Sonic's is a different value.
 	/// </summary>
 	void releaseMode_accountforSuperSonic() {
 		if (playertwp[pno]->mode == 99) {
-			if (playerpwp[pno]->equipment & 0x8000)
+			if (playerpwp[pno]->equipment & 0x8000) {
 				playertwp[pno]->mode = 75;
-			else
+			}
+			else {
 				playertwp[pno]->mode = 1;
+
+				//Put player on board or pinball
+				Uint16 reqaction = playerpwp[pno]->mj.reqaction;
+				switch (playertwp[pno]->counter.b[1]) {
+				case PLNO_SONIC:
+					if (reqaction >= 102 && reqaction <= 124) {
+						SetInputP(pno, PL_OP_SNOWBOARDING);
+						CreateElementalTask(3, LEV_2, SonicSnowBoard)->twp->counter.b[0] = pno;
+					}
+
+					if (reqaction == 125) {
+						SetInputP(pno, PL_OP_PINBALL);
+					}
+					break;
+				case PLNO_TAILS:
+					if (reqaction >= 107 && reqaction <= 127) {
+						SetInputP(pno, PL_OP_SNOWBOARDING);
+						CreateElementalTask(3, LEV_2, MilesSnowBoard)->twp->counter.b[0] = pno;
+					}
+
+					if (reqaction == 128) {
+						SetInputP(pno, PL_OP_PINBALL);
+					}
+					break;
+				default:
+					break;
+				}
+			}
 		}
 	}
 
@@ -507,14 +682,21 @@ static Bool checkHintDisp() {
 		WriteData<1>((int*)(0x7B5288), 0x75); //Stop Eggman's Debug movement interfering.
 		WriteData<1>((int*)(0x7B529C), 0x75); //^
 
+		//Disable cart cam zoom
+		WriteData<1>((Uint8*)0x46A6DB, 0x00);
+		WriteData<1>((Uint8*)0x46A6F4, 0x00);
+
+		//Enable getting in carts with invincibility frames (because they're used for this)
+		WriteData<1>((Uint8*)0x797863, 0x75);
+		WriteData<1>((Uint8*)0x797864, 0x04);
+		WriteData<4>((Uint8*)0x797865, 0x90);
+
 
 		//Disable Death Planes
 		if (!allowDeath) {
 			WriteData<1>((int*)(0X446AD0), 0xC3);
 			WriteData<1>((int*)(0x446AF0), 0xC3);
 		}
-
-
 
 		WriteData<1>((int*)(0x413EBA), 0xEB); //Stop loop_const (Game speed) being forced to 60 FPS
 
@@ -541,7 +723,8 @@ static Bool checkHintDisp() {
 		}
 
 		if (maker_mode != mode) {
-			maker_mode = mode;
+			if(!isNPC(pno) || mode != M_MODE_ANIM) //Don't let players in NPC mode use the animation player
+				maker_mode = mode;
 		}
 		else {
 			maker_mode = M_MODE_NONE;
@@ -607,6 +790,16 @@ static Bool checkHintDisp() {
 
 		WriteData<1>((int*)(0x413EBA), 0x75); //Reset code for loop_const (Game speed) being forced to 60 FPS
 		
+		//Reset getting in carts with invincibility frames
+		WriteData<1>((Uint8*)0x797863, 0x0F);
+		WriteData<1>((Uint8*)0x797864, 0x85);
+		WriteData<1>((Uint8*)0x797865, 0xA5);
+		WriteData<3>((Uint8*)0x797866, 0x00);
+
+		//enable cart cam controls
+		WriteData<1>((Uint8*)0x46A6DB, 0x10);
+		WriteData<1>((Uint8*)0x46A6F4, 0x20);
+
 		//Reset speed
 		if(EV_CheckCansel())
 			dsInitInt(2, 1);
@@ -665,7 +858,15 @@ static Bool checkHintDisp() {
 				njPrintC(NJM_LOCATION(2, col++), "1 = Free Move / Action Viewer");
 				njPrintC(NJM_LOCATION(2, col++), "2 = Camera Settings");
 				njPrintC(NJM_LOCATION(2, col++), "3 = Head/Face Settings");
+
+				if(isNPC(pno)) //Can't enter Anim player in NPC mode, so darken the option
+					njPrintColor(0xFF808080);
+
 				njPrintC(NJM_LOCATION(2, col++), "4 = Animation Player");
+
+				if (isNPC(pno))
+					njPrintColor(0xFFFFFFFF);
+
 				njPrintC(NJM_LOCATION(2, col++), "5 = Particle Generator");
 				njPrintC(NJM_LOCATION(2, col++), "6 = Event Functions");
 				njPrintC(NJM_LOCATION(2, col++), "7 = Prop Spawner");
@@ -675,6 +876,48 @@ static Bool checkHintDisp() {
 				njPrintC(NJM_LOCATION(2, col++), "Y Button = Select Menu");
 				njPrintC(NJM_LOCATION(2, col++), "D Button (SEL)/Caps Lock = Toggle Display");
 				njPrintC(NJM_LOCATION(2, col++), "C Button (LB) = Play Text");
+				col++;
+				
+
+				//None of these work in Sky Chase
+				if (GetStageNumber() == 0x2400 || GetStageNumber() == 0x2500) {
+					njPrintColor(0xFF808080);
+				}
+
+				if (playertwp[pno] && playertwp[pno]->counter.b[1] == PLNO_EGGMAN && isInvisible[pno]) {
+					njPrintColor(0xFFFF0000);
+					njPrintC(NJM_LOCATION(2, col++), "YOU ARE NOT ALLOWED TO HIDE"); //his display is a usercall and they're annoying lol
+					njPrintColor(0xFFFFFFFF);
+
+					if (GetStageNumber() == 0x2400 || GetStageNumber() == 0x2500) {
+						njPrintColor(0xFF808080);
+					}
+
+				}
+				else {
+					njPrint(NJM_LOCATION(2, col++), "Visible: %s", !isInvisible[pno] ? "Y" : "N");
+				}
+
+				//All of the below options are disabled for frozen players due to SetInputP changing player modes.
+				if (playerFreeze[pno]) {
+					njPrintColor(0xFF808080);
+				}
+
+				njPrintC(NJM_LOCATION(2, col++), "Reset Mode");
+				njPrintC(NJM_LOCATION(2, col++), "Spawn Cart");
+
+				if (playertwp[pno] && playertwp[pno]->counter.b[1] == PLNO_SONIC || playertwp[pno]->counter.b[1] == PLNO_TAILS) {
+					njPrintC(NJM_LOCATION(2, col++), "Spawn Snowboard");
+					njPrintC(NJM_LOCATION(2, col++), "Become Pinball");
+				}
+
+				if (playerpwp[pno] && playertwp[pno] && playertwp[pno]->counter.b[1] == PLNO_SONIC) {
+					njPrint(NJM_LOCATION(2, col++), "Super Sonic: %s", playerpwp[pno]->equipment & 0x8000 ? "Y" : "N");
+				}
+
+				njPrintColor(0xFFFFFFFF);
+
+				col++;
 				if(pno)
 					njPrintC(NJM_LOCATION(2, col++), "Z Button = Delete Player");
 				if (DEBUGMODEMOD) {
@@ -775,8 +1018,12 @@ static Bool checkHintDisp() {
 		//Classic B button controls
 		if (per[0]->press & Buttons_B) {
 			if (playerFreeze[pno]) {
-				if (maker_mode && maker_mode + 1 < M_MODE_MAX)
+				if (maker_mode && maker_mode + 1 < M_MODE_MAX) {
 					++maker_mode;
+
+					if (isNPC(pno) && maker_mode == M_MODE_ANIM) //Skip anim player in NPC mode
+						++maker_mode;
+				}
 				else
 					maker_mode = 1;
 			}
@@ -809,6 +1056,17 @@ static Bool checkHintDisp() {
 		//}
 
 		//--- When the maker is on ---
+
+
+		if (cursor >= M_EXTRA_BOARD && playertwp[pno]) {
+			if (playertwp[pno]->counter.b[1] != PLNO_SONIC && playertwp[pno]->counter.b[1] != PLNO_TAILS ||
+				cursor == M_EXTRA_SUPER && playertwp[pno]->counter.b[1] != PLNO_SONIC) {
+				--cursor;
+			}
+		}
+
+
+
 
 		//Show the title display
 		if (showDisplay)
@@ -940,7 +1198,7 @@ static Bool checkHintDisp() {
 				//for face too it's CTRL+SHIFT+P
 				if (KeyGetOn(KEYS_RSHIFT) || KeyGetOn(KEYS_LSHIFT)) {
 					for (Sint32 i = 0; i < 8; ++i) {
-						if (playertp[i]) {
+						if (playertp[i] && !isNPC(i)) {
 							playFace(i, i + 1);
 						}
 					}
@@ -948,7 +1206,7 @@ static Bool checkHintDisp() {
 
 				//anim
 				for (Sint32 i = 0; i < 8; ++i) {
-					if (playertp[i] && checkPlaylistExists(i))
+					if (playertp[i] && checkPlaylistExists(i) && !isNPC(i))
 						playAnimQueue(i);
 				}
 		}
@@ -972,7 +1230,7 @@ static Bool checkHintDisp() {
 				//Read from file to get face animation
 				for (Sint32 i = 0; i < 8; ++i) {
 					if (KeyGetPress(KEYS_1 + i)) {
-						if (playertp[i])
+						if (playertp[i] && !isNPC(i))
 							playFace(i, i + 1);
 					}
 				}
@@ -983,13 +1241,18 @@ static Bool checkHintDisp() {
 		if (KeyGetPress(KEYS_CAPSLOCK) || (per[0]->press & Buttons_D && !KeyGetPress(KEYS_V)) && !(per[0]->on & Buttons_Z)) {
 			showDisplay = showDisplay != TRUE; //VS hates our Bool type and kept trying to recommend bitwise with !showDisplay lol
 
-			//Reroll random text
-			if (!showDisplay)
+			//Reroll random text 
+			if (!showDisplay) {
 				rollText();
+			}
+			else {
+			}
 		}
 
-
-
+		//Since objects move and looking obj in this uses look point, the looking pos needs to be updated outside the head editor.
+		if (isLookingAtObject[pno]) {
+			setLookingObject(pno);
+		}
 
 		//Create Custom Subtitle. Aside from names, this is the same as the original.
 		if ((per[0]->press & Buttons_C && !KeyGetPress(KEYS_C)) || KeyGetPress(KEYS_L)) {
@@ -1039,6 +1302,7 @@ static Bool checkHintDisp() {
 					last1aHighFloor_tp[pno] = 0;
 				}
 				EV_RemovePlayer(pno);
+				isInvisible[pno] = FALSE;
 				return;
 			}
 		}
@@ -1087,6 +1351,7 @@ static Bool checkHintDisp() {
 
 		ControlEnabled = TRUE;
 
+
 		//Process mode.
 		//These are always ran when the mode is active.
 		switch (maker_mode) {
@@ -1094,13 +1359,103 @@ static Bool checkHintDisp() {
 			switch (per[0]->press) {
 			case Buttons_Up:
 				cursor = NJM_MAX(0, cursor - 1);
+
+				if (cursor > M_MODE_FLAGS - 1 && cursor < M_EXTRA_VISIBLE) {
+					cursor = M_MODE_FLAGS - 1;
+				}
+
 				break;
 			case Buttons_Down:
-				cursor = NJM_MIN(M_MODE_MAX - 2, cursor + 1);
+				cursor = NJM_MIN(M_MODE_MAX - 1, cursor + 1);
+				
+				if (cursor > M_MODE_FLAGS - 1 && cursor < M_EXTRA_VISIBLE) {
+					cursor = M_EXTRA_VISIBLE;
+				}
+
 				break;
 			case Buttons_Y:
-				if (showDisplay) //It's a bit awkward with it off
-					maker_setMode(cursor + 1);
+				if (showDisplay) { //It's a bit awkward with it off
+
+					if(cursor < M_MODE_FLAGS)
+						maker_setMode(cursor + 1);
+					else {
+						
+						switch (cursor) {
+						case M_EXTRA_VISIBLE:
+							isInvisible[pno] = isInvisible[pno] ? FALSE : TRUE;
+							break;
+						case M_EXTRA_RESET:
+
+							if (!playerFreeze[pno]) {
+
+								//If driving a cart then get rid of it
+								removeCart(pno);
+
+								SetInputP(pno, PL_OP_LETITGO);
+							}
+							break;
+						case M_EXTRA_CART:
+						{
+							if (GetStageNumber() == 0x2400 || GetStageNumber() == 0x2500)
+								break;
+
+
+							if (playertwp[pno]) {
+								task* cart_tp = CreateElementalTask(15, LEV_3, EnemyCart);
+
+								texLoadTexturePvmFile("OBJ_SHAREOBJ", &OBJ_SHAREOBJ_TEXLIST);
+
+								if (cart_tp) {
+									cart_tp->twp->pos = playertwp[pno]->pos;
+									cart_tp->twp->ang = playertwp[pno]->ang;
+									
+									//These are the default values for player carts in twinkle circuit
+
+									//Don't spawn with an enemy inside
+									cart_tp->twp->scl.y = 1.0f;
+
+									//Size
+									if (playertwp[pno]->counter.b[1] == PLNO_BIG)
+										cart_tp->twp->scl.z = 1.0f;
+									else if (playertwp[pno]->counter.b[1] == PLNO_E102)
+										cart_tp->twp->scl.z = 2.0f;
+									else {
+										cart_tp->twp->scl.z = 0.0f;
+									}
+
+									//Colour
+									cart_tp->twp->scl.x = _color[playertwp[pno]->counter.b[1]];
+
+								}
+							}
+
+							break;
+						}
+						case M_EXTRA_BOARD:
+							if (!playerFreeze[pno]) {
+								SetInputP(pno, PL_OP_SNOWBOARDING);
+
+								if (playertwp[pno]->counter.b[1] == PLNO_SONIC) {
+									CreateElementalTask(3, LEV_2, SonicSnowBoard)->twp->counter.b[0] = pno;
+								}
+								else if (playertwp[pno]->counter.b[1] == PLNO_TAILS) {
+									CreateElementalTask(3, LEV_2, MilesSnowBoard)->twp->counter.b[0] = pno;
+								}
+							}
+
+							break;
+						case M_EXTRA_PINBALL:
+							if (!playerFreeze[pno])
+								SetInputP(pno, PL_OP_PINBALL);
+							break;
+						case M_EXTRA_SUPER:
+							toggleSuperSonic(pno);
+							break;
+						}
+
+
+					}
+				}
 				return;
 			}
 

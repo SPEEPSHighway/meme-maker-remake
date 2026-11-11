@@ -12,10 +12,17 @@ enum {
 	M_MODE_PROP = 7,
 	M_MODE_NPC = 8,
 	M_MODE_FLAGS = 9,
+	M_EXTRA_VISIBLE = 14,
+	M_EXTRA_RESET,
+	M_EXTRA_CART,
+	M_EXTRA_BOARD,
+	M_EXTRA_PINBALL,
+	M_EXTRA_SUPER,
 	M_MODE_MAX,
 };
 
 extern Sint32 maker_mode;
+extern Bool eventCamPlayback;
 
 enum keys {
 	KEYS_B = 5,

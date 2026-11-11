@@ -344,6 +344,26 @@ void doBasicAnimation(Sint32 pno) {
 	playerpwp[pno]->mj.mtnmode = md_mtn;
 }
 
+void removeCart(Sint32 pno) {
+	if (taskOfPlayerOn) {
+		taskOfPlayerOn->twp->mode = 7; //Explode
+		cart_data = (ENEMY_CART_DATA*)taskOfPlayerOn->awp->work.ptr[0];
+			
+		cart_data->ignor_collision = 30;
+		playertwp[pno]->cwp->info->a = cart_data->player_colli_r;
+		playertwp[pno]->smode = 28;
+		playertwp[pno]->flag &= ~0x1000;
+		taskOfPlayerOn->twp->cwp->info->attr &= ~0x1000;
+
+		if (maker_mode == 0) {
+			playertwp[pno]->mode = 1;
+		}
+
+		taskOfPlayerOn = 0;
+		CameraReleaseEventCamera();
+	}
+}
+
 /// <summary>
 /// Edited Free Movement/Noclip processing
 /// </summary>
@@ -357,13 +377,7 @@ void doPlayerMovement(Sint32 pno) {
 
 
 	//If driving a cart then get rid of it
-	if (taskOfPlayerOn) {
-		taskOfPlayerOn->twp->mode = 7; //Explode
-		cart_data->ignor_collision = 30;
-		playertwp[pno]->cwp->info->a = cart_data->player_colli_r;
-		playertwp[pno]->smode = 28;
-		taskOfPlayerOn = 0;
-	}
+	removeCart(pno);
 
 	if (per[0]->on & Buttons_Z) { //Scl
 		if (per[0]->on & Buttons_X) { //Uniform

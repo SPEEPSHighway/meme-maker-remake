@@ -10,7 +10,7 @@ Float movementSpeedHead = 10.0f;
 Float movementSpeedRateHead = 0.1f;
 Float movementSpeedPoint = 3.0f;
 Float movementSpeedRatePoint = 0.1f;
-Sint32 lookMode;
+Sint32 lookMode[8];
 Sint32 lookObjType;
 Sint32 lookPlayerID;
 Sint32 lookObjectID;
@@ -19,9 +19,11 @@ Bool isEventFaceSpeed;
 FACETBL facetbl2[faceEntries.size()];
 Bool eyeSelection;
 
-static Sint32 cursorID = 1;
+static Sint32 cursorID[8] = { 1, 1, 1, 1, 1, 1, 1, 1 };
 
 static NJS_POINT3 pointCoords;
+
+Bool isLookingAtObject[8];
 
 static const std::string objLookList[] = {
 	"CAMERA",
@@ -115,7 +117,7 @@ void displayHeadInfo(Sint32 col, Sint32 pno) {
 	njPrintC(NJM_LOCATION(2, col++), "/ = Reset Head");
 	col++;
 
-	Sint32 colArrow = col + cursorID;
+	Sint32 colArrow = col + cursorID[pno];
 	njPrintC(NJM_LOCATION(1, colArrow), ">");
 	njPrintC(NJM_LOCATION(2, col++), "BACK");
 
@@ -124,7 +126,7 @@ void displayHeadInfo(Sint32 col, Sint32 pno) {
 	else
 		njPrint(NJM_LOCATION(2, col++), "Face: %d", faceNo[pno]);
 	njPrint(NJM_LOCATION(2, col++), "G = Change Face Animation Speed (Currently: %s)", isEventFaceSpeed ? "EVENTS" : "IN-GAME");
-	if (lookMode == 4) {
+	if (lookMode[pno] == 4) {
 		col++;
 		njPrintC(NJM_LOCATION(2, col++), "CUSTOM HEAD CONTROLS MODE");
 		njPrintC(NJM_LOCATION(2, col++), "Unlimited Head/Eye rotation");
@@ -154,7 +156,7 @@ void displayHeadInfo(Sint32 col, Sint32 pno) {
 			njPrintC(NJM_LOCATION(2, col++), "N = Custom Head Controls");
 	}
 	col++;
-	switch (lookMode) {
+	switch (lookMode[pno]) {
 	case LOOK_MODE_ANGLE:
 	{
 		njPrintC(NJM_LOCATION(2, col++), "ANGLE MODE");
@@ -204,6 +206,8 @@ void displayHeadInfo(Sint32 col, Sint32 pno) {
 		break;
 	}
 	case LOOK_MODE_OBJECT:
+
+		isLookingAtObject[pno] = TRUE;
 		njPrintC(NJM_LOCATION(2, col++), "OBJECT MODE");
 		njPrintC(NJM_LOCATION(2, col++), "Player is now looking at an object.");
 		col++;
@@ -350,7 +354,7 @@ void setLookingPoint(Sint32 pno) {
 	playertwp[pno]->ewp->look.mode = LOOK_MODE_POINT;
 
 	task* point_tp = NULL;
-	if (KeyGetPress(KEYS_F) || (cursorID == 18 && per[0]->press & Buttons_Y)) {
+	if (KeyGetPress(KEYS_F) || (cursorID[pno] == 18 && per[0]->press & Buttons_Y)) {
 		isEditPoint = isEditPoint ? FALSE : TRUE; //VS hates our Bool type and kept trying to recommend bitwise with !showDisplay lol
 
 		if (isEditPoint) {
@@ -374,12 +378,12 @@ void setLookingPoint(Sint32 pno) {
 	}
 
 	//Save & Load
-	if (KeyGetPress(KEYS_RARROW) || (cursorID == 17 && per[0]->press & Buttons_Right)) {
+	if (KeyGetPress(KEYS_RARROW) || (cursorID[pno] == 17 && per[0]->press & Buttons_Right)) {
 		if (playertwp[pno]) {
 			pointCoords = playertwp[pno]->ewp->look.pos;
 		}
 	}
-	else if (KeyGetPress(KEYS_LARROW) || (cursorID == 17 && per[0]->press & Buttons_Left)) {
+	else if (KeyGetPress(KEYS_LARROW) || (cursorID[pno] == 17 && per[0]->press & Buttons_Left)) {
 		if (playertwp[pno]) {
 			if (isEditPoint && pTaskWorkEditor) { //Account for being in the editor
 				pTaskWorkEditor->pos = pointCoords;
@@ -572,19 +576,19 @@ void doHeadFunctions(Sint32 pno) {
 	if (playerheads[pno]) {
 		//Selection Arrow
 		Uint32 isPressorOn = per[0]->press;
-		if (lookMode != 1 && cursorID > 6 && per[0]->on & Buttons_Y) {
+		if (lookMode[pno] != 1 && cursorID[pno] > 6 && per[0]->on & Buttons_Y) {
 			isPressorOn = per[0]->on & ~Buttons_Y;
 		}
 
-		if (per[0]->press & Buttons_Y && cursorID == 0) {
-			cursorID = 1;
+		if (per[0]->press & Buttons_Y && cursorID[pno] == 0) {
+			cursorID[pno] = 1;
 			maker_mode = 0;
 			return;
 		}
 
 		switch (isPressorOn) {
 		case Buttons_Right:
-			switch (cursorID) {
+			switch (cursorID[pno]) {
 			case 1:  //Face
 			{
 				Sint32 maxFace = 19;
@@ -603,7 +607,7 @@ void doHeadFunctions(Sint32 pno) {
 				lookObjType = NJM_MIN(lookObjType + 1, 2);
 				break;
 			case 12: //Object player/Custom Eyes
-				if (lookMode == LOOK_MODE_OBJECT)
+				if (lookMode[pno] == LOOK_MODE_OBJECT)
 					lookPlayerID = NJM_MIN(lookPlayerID + 1, 7);
 				else
 					eyeSelection = eyeSelection != 1;
@@ -615,7 +619,7 @@ void doHeadFunctions(Sint32 pno) {
 				movementSpeedRateHead = NJM_MIN(1.0f, movementSpeedRateHead + 0.001f);
 				break;
 			case 15: //Object SET
-				if (lookMode == LOOK_MODE_OBJECT) {
+				if (lookMode[pno] == LOOK_MODE_OBJECT) {
 					if (++lookObjectID >= 1024) {
 						lookObjectID = 0;
 					}
@@ -624,7 +628,7 @@ void doHeadFunctions(Sint32 pno) {
 			}
 			break;
 		case Buttons_Left:
-			switch (cursorID) {
+			switch (cursorID[pno]) {
 			case 1:  //Face
 				faceNo[pno] = NJM_MAX(faceNo[pno] - 1, -1);
 
@@ -644,7 +648,7 @@ void doHeadFunctions(Sint32 pno) {
 				break;
 			case 12: //Object player/Custom Eyes
 
-				if (lookMode == LOOK_MODE_OBJECT)
+				if (lookMode[pno] == LOOK_MODE_OBJECT)
 					lookPlayerID = NJM_MAX(lookPlayerID - 1, 0);
 				else
 					eyeSelection = eyeSelection != 1;
@@ -656,7 +660,7 @@ void doHeadFunctions(Sint32 pno) {
 				movementSpeedRateHead = NJM_MAX(0.0f, movementSpeedRateHead - 0.001f);
 				break;
 			case 15: //Object SET
-				if (lookMode == LOOK_MODE_OBJECT) {
+				if (lookMode[pno] == LOOK_MODE_OBJECT) {
 					if (--lookObjectID < 0) {
 						lookObjectID = 1023;
 					}
@@ -665,72 +669,72 @@ void doHeadFunctions(Sint32 pno) {
 			}
 			break;
 		case Buttons_Up:
-			cursorID = NJM_MAX(0, cursorID - 1);
+			cursorID[pno] = NJM_MAX(0, cursorID[pno] - 1);
 
-			switch (lookMode) {
+			switch (lookMode[pno]) {
 			case 0:
 				break;
 			case 1:
-				if (cursorID > 6 && cursorID < 13)
-					cursorID = 6;
+				if (cursorID[pno] > 6 && cursorID[pno] < 13)
+					cursorID[pno] = 6;
 				break;
 			case 2:
-				if (cursorID > 6 && cursorID < 17)
-					cursorID = 6;
+				if (cursorID[pno] > 6 && cursorID[pno] < 17)
+					cursorID[pno] = 6;
 				if (isEditPoint)
-					cursorID = NJM_MAX(17, cursorID);
+					cursorID[pno] = NJM_MAX(17, cursorID[pno]);
 				break;
 			case 3:
-				if (cursorID > 6 && cursorID < 11)
-					cursorID = 6;
-				if (lookObjType == 2 && cursorID > 11 && cursorID < 15)
-					cursorID = 11;
+				if (cursorID[pno] > 6 && cursorID[pno] < 11)
+					cursorID[pno] = 6;
+				if (lookObjType == 2 && cursorID[pno] > 11 && cursorID[pno] < 15)
+					cursorID[pno] = 11;
 				break;
 			case 4:
-				if (cursorID > 2 && cursorID < 12)
-					cursorID = 2;
+				if (cursorID[pno] > 2 && cursorID[pno] < 12)
+					cursorID[pno] = 2;
 				break;
 			}
 
 			break;
 		case Buttons_Down:
-			switch (lookMode) {
+			switch (lookMode[pno]) {
 			case 0:
-				cursorID = NJM_MIN(6, cursorID + 1);
+				cursorID[pno] = NJM_MIN(6, cursorID[pno] + 1);
 				break;
 			case 1:
-				cursorID = NJM_MIN(14, cursorID + 1);
-				if (cursorID > 6 && cursorID < 13)
-					cursorID = 13;
+				cursorID[pno] = NJM_MIN(14, cursorID[pno] + 1);
+				if (cursorID[pno] > 6 && cursorID[pno] < 13)
+					cursorID[pno] = 13;
 				break;
 			case 2:
-				cursorID = NJM_MIN(18, cursorID + 1);
-				if (cursorID > 6 && cursorID < 17)
-					cursorID = 17;
+				cursorID[pno] = NJM_MIN(18, cursorID[pno] + 1);
+				if (cursorID[pno] > 6 && cursorID[pno] < 17)
+					cursorID[pno] = 17;
 				break;
 			case 3:
 				switch (lookObjType) {
 				case 0:
-					cursorID = NJM_MIN(11, cursorID + 1);
+					cursorID[pno] = NJM_MIN(11, cursorID[pno] + 1);
 					break;
 				case 1:
-					cursorID = NJM_MIN(12, cursorID + 1);
+					cursorID[pno] = NJM_MIN(12, cursorID[pno] + 1);
 					break;
 				case 2:
-					cursorID = NJM_MIN(15, cursorID + 1);
-					if (cursorID > 11 && cursorID < 15)
-						cursorID = 15;
+					cursorID[pno] = NJM_MIN(15, cursorID[pno] + 1);
+					if (cursorID[pno] > 11 && cursorID[pno] < 15)
+						cursorID[pno] = 15;
 					break;
 				}
 
-				if (cursorID > 6 && cursorID < 11)
-					cursorID = 11;
+				if (cursorID[pno] > 6 && cursorID[pno] < 11)
+					cursorID[pno] = 11;
 				break;
 			case 4:
-				cursorID = NJM_MIN(15, cursorID + 1);
+				cursorID[pno] = NJM_MIN(15, cursorID[pno] + 1);
 
-				if (cursorID > 2 && cursorID < 12)
-					cursorID = 12;
+				if (cursorID[pno] > 2 && cursorID[pno] < 12)
+					cursorID[pno] = 12;
 				break;
 			}
 			break;
@@ -748,7 +752,7 @@ void doHeadFunctions(Sint32 pno) {
 		}
 
 
-		if (KeyGetPress(KEYS_G) || (per[0]->press & Buttons_Y && cursorID == 2)) {
+		if (KeyGetPress(KEYS_G) || (per[0]->press & Buttons_Y && cursorID[pno] == 2)) {
 			isEventFaceSpeed = isEventFaceSpeed ? FALSE : TRUE;
 
 			if (isEventFaceSpeed) {
@@ -759,40 +763,47 @@ void doHeadFunctions(Sint32 pno) {
 			}
 		}
 
-		if (lookMode != 4) { //None of these work without DirectAhead's code so block using them when it's disabled.
-			if (KeyGetPress(KEYS_C) || (per[0]->press & Buttons_Y && cursorID == 3)) {
-				lookMode = lookMode == LOOK_MODE_ANGLE ? LOOK_MODE_NORMAL : LOOK_MODE_ANGLE;
-				cursorID = lookMode == LOOK_MODE_ANGLE ? 13 : 0;
+		if (lookMode[pno] != 4) { //None of these work without DirectAhead's code so block using them when it's disabled.
+			if (KeyGetPress(KEYS_C) || (per[0]->press & Buttons_Y && cursorID[pno] == 3)) {
+				isLookingAtObject[pno] = FALSE;
+				lookMode[pno] = lookMode[pno] == LOOK_MODE_ANGLE ? LOOK_MODE_NORMAL : LOOK_MODE_ANGLE;
+				cursorID[pno] = lookMode[pno] == LOOK_MODE_ANGLE ? 13 : 0;
 			}
-			if (KeyGetPress(KEYS_V) || (per[0]->press & Buttons_Y && cursorID == 4)) {
-				lookMode = lookMode == LOOK_MODE_POINT ? LOOK_MODE_NORMAL : LOOK_MODE_POINT;
-				if (lookMode == LOOK_MODE_POINT) {
+			if (KeyGetPress(KEYS_V) || (per[0]->press & Buttons_Y && cursorID[pno] == 4)) {
+				isLookingAtObject[pno] = FALSE;
+				lookMode[pno] = lookMode[pno] == LOOK_MODE_POINT ? LOOK_MODE_NORMAL : LOOK_MODE_POINT;
+				if (lookMode[pno] == LOOK_MODE_POINT) {
 					playertwp[pno]->ewp->look.pos = playertwp[pno]->pos; //Init looking point.
 				}
-				cursorID = lookMode == LOOK_MODE_POINT ? 17 : 0;
+				cursorID[pno] = lookMode[pno] == LOOK_MODE_POINT ? 17 : 0;
 			}
-			if (KeyGetPress(KEYS_B) || (per[0]->press & Buttons_Y && cursorID == 5)) {
-				lookMode = lookMode == LOOK_MODE_OBJECT ? LOOK_MODE_NORMAL : LOOK_MODE_OBJECT;
-				cursorID = lookMode == LOOK_MODE_OBJECT ? 11 : 0;
+			if (KeyGetPress(KEYS_B) || (per[0]->press & Buttons_Y && cursorID[pno] == 5)) {
+				isLookingAtObject[pno] = lookMode[pno] == LOOK_MODE_OBJECT ? FALSE : TRUE;
+				lookMode[pno] = lookMode[pno] == LOOK_MODE_OBJECT ? LOOK_MODE_NORMAL : LOOK_MODE_OBJECT;
+				cursorID[pno] = lookMode[pno] == LOOK_MODE_OBJECT ? 11 : 0;
 			}
 		}
 
 		if (playertwp[pno] && playertwp[pno]->counter.b[1] != PLNO_BIG) {
-			if (KeyGetPress(KEYS_N) || (per[0]->press & Buttons_Y && lookMode != 4 && cursorID == 6) || (lookMode == 4 && cursorID == 15 && per[0]->press & Buttons_Y)) {
-				lookMode = lookMode == 4 ? LOOK_MODE_NORMAL : 4;
+			if (KeyGetPress(KEYS_N) || (per[0]->press & Buttons_Y && lookMode[pno] != 4 && cursorID[pno] == 6) || (lookMode[pno] == 4 && cursorID[pno] == 15 && per[0]->press & Buttons_Y)) {
+				lookMode[pno] = lookMode[pno] == 4 ? LOOK_MODE_NORMAL : 4;
+				isLookingAtObject[pno] = FALSE;
 
-				if (lookMode == 4) {
-					cursorID = 12;
+				if (lookMode[pno] == 4) {
+					cursorID[pno] = 12;
 					playerheads[pno]->twp->mode = 9; // Don't run DirectAhead code
 				}
 				else {
-					cursorID = 6;
+					cursorID[pno] = 6;
 					playerheads[pno]->twp->mode = 1;
 				}
 			}
 		}
 
-		switch (lookMode) {
+		switch (lookMode[pno]) {
+		case LOOK_MODE_NORMAL:
+			CancelLookingAtP(pno);
+			break;
 		case LOOK_MODE_ANGLE:
 			setLookingAngle(pno);
 			break;
@@ -800,7 +811,7 @@ void doHeadFunctions(Sint32 pno) {
 			setLookingPoint(pno);
 			break;
 		case LOOK_MODE_OBJECT:
-			setLookingObject(pno);
+			//This is done in mod.cpp now
 			break;
 		case 4: //No Limits
 			setLookingNoLimits(pno);
